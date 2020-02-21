@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js",
+    "db:makemigrations": "./node_modules/sequelize-auto-migrations/bin/makemigration.js"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +18,16 @@
     "url": "https://github.com/Ksinia/erudit-server/issues"
   },
   "homepage": "https://github.com/Ksinia/erudit-server#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "bcrypt": "^4.0.0",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "pg": "^7.18.2",
+    "sequelize": "^5.21.5",
+    "sequelize-auto-migrations": "github:scimonster/sequelize-auto-migrations",
+    "umzug": "^2.2.0"
+  }
 }
