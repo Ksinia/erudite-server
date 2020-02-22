@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { User } = require("../models");
+const { user } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 
@@ -14,7 +14,7 @@ router.post("/signup", async (req, res, next) => {
   }
   let userWithSameName = null;
   try {
-    userWithSameName = await User.findOne({
+    userWithSameName = await user.findOne({
       where: { name: req.body.name }
     });
   } catch (error) {
@@ -28,8 +28,8 @@ router.post("/signup", async (req, res, next) => {
       password: bcrypt.hashSync(req.body.password, 10)
     };
     try {
-      const user = await User.create(userData);
-      login(res, next, user.name, req.body.password);
+      const newUser = await user.create(userData);
+      login(res, next, newUser.name, req.body.password);
     } catch (error) {
       if (error.name === "SequelizeValidationError") {
         console.log("Error errors[0] type:", typeof error.errors[0]);

@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { toJWT } = require("./jwt");
-const { User, Melody, Dictation, Sequelize } = require("../models");
+const { user } = require("../models");
 const bcrypt = require("bcrypt");
 const authMiddleware = require("../auth/middleware");
 
@@ -11,43 +11,43 @@ async function login(res, next, name = null, password = null) {
     });
   } else {
     try {
-      const user = await User.findOne({
-        where: { name: name },
-        group: ["User.id", "Melodies.id"],
-        include: {
-          model: Melody,
-          attributes: {
-            include: [
-              [
-                Sequelize.fn("COUNT", Sequelize.col("Melodies.Dictations.id")),
-                "dictationsCount"
-              ]
-            ]
-          },
-          include: [
-            {
-              model: Dictation,
-              attributes: []
-            }
-          ]
-        }
+      const currentUser = await user.findOne({
+        where: { name: name }
+        // group: ["currentUser.id", "Melodies.id"],
+        // include: {
+        //   model: Melody,
+        //   attributes: {
+        //     include: [
+        //       [
+        //         Sequelize.fn("COUNT", Sequelize.col("Melodies.Dictations.id")),
+        //         "dictationsCount"
+        //       ]
+        //     ]
+        //   },
+        //   include: [
+        //     {
+        //       model: Dictation,
+        //       attributes: []
+        //     }
+        //   ]
+        // }
       });
-      if (!user) {
+      if (!currentUser) {
         res.status(400).send({
           message: "User with that name does not exist"
         });
       }
       // 2. use bcrypt.compareSync to check the password against the stored hash
-      else if (bcrypt.compareSync(password, user.password)) {
+      else if (bcrypt.compareSync(password, currentUser.password)) {
         // 3. if the password is correct, return a JWT with the userId of the user (user.id)
-        const jwt = toJWT({ userId: user.id });
+        const jwt = toJWT({ userId: currentUser.id });
         const action = {
           type: "LOGIN_SUCCESS",
           payload: {
-            id: user.id,
-            name: user.name,
-            jwt: jwt,
-            melodies: user.Melodies
+            id: currentUser.id,
+            name: currentUser.name,
+            jwt: jwt
+            // melodies: currentUser.Melodies
           }
         };
         const string = JSON.stringify(action);
@@ -79,27 +79,30 @@ router.get(
     const jwt = req.headers.authorization.split(" ")[1];
     try {
       // I need to get user again, because I need to include all the user's information
-      const user = await User.findByPk(userId, {
-        group: ["User.id", "Melodies.id"],
-        include: {
-          model: Melody,
-          attributes: {
-            include: [
-              [
-                Sequelize.fn("COUNT", Sequelize.col("Melodies.Dictations.id")),
-                "dictationsCount"
-              ]
-            ]
-          },
-          include: [
-            {
-              model: Dictation,
-              attributes: []
-            }
-          ]
-        }
-      });
-      if (!user) {
+      const currentUser = await user.findByPk(
+        userId
+        //   , {
+        //   group: ["currentUser.id", "Melodies.id"],
+        //   include: {
+        //     model: Melody,
+        //     attributes: {
+        //       include: [
+        //         [
+        //           Sequelize.fn("COUNT", Sequelize.col("Melodies.Dictations.id")),
+        //           "dictationsCount"
+        //         ]
+        //       ]
+        //     },
+        //     include: [
+        //       {
+        //         model: Dictation,
+        //         attributes: []
+        //       }
+        //     ]
+        //   }
+        // }
+      );
+      if (!currentUser) {
         res.status(400).send({
           message: "Invalid token"
         });
@@ -107,10 +110,10 @@ router.get(
         const action = {
           type: "LOGIN_SUCCESS",
           payload: {
-            id: user.id,
-            name: user.name,
-            jwt: jwt,
-            melodies: user.Melodies
+            id: currentUser.id,
+            name: currentUser.name,
+            jwt: jwt
+            // melodies: currentUser.Melodies
           }
         };
         const string = JSON.stringify(action);

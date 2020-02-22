@@ -15,6 +15,54 @@
             "charset": "utf8",
             "indexes": []
         },
+        "rooms": {
+            "tableName": "rooms",
+            "schema": {
+                "id": {
+                    "allowNull": false,
+                    "primaryKey": true,
+                    "autoIncrement": true,
+                    "field": "id",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "name": {
+                    "allowNull": false,
+                    "unique": true,
+                    "field": "name",
+                    "seqType": "Sequelize.STRING"
+                },
+                "maxPlayers": {
+                    "field": "maxPlayers",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "phase": {
+                    "defaultValue": {
+                        "value": "waiting"
+                    },
+                    "field": "phase",
+                    "seqType": "Sequelize.ENUM('waiting', 'ready', 'started', 'finished')"
+                },
+                "turn": {
+                    "field": "turn",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "score": {
+                    "field": "score",
+                    "seqType": "Sequelize.JSON"
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                }
+            },
+            "indexes": []
+        },
         "users": {
             "tableName": "users",
             "schema": {
@@ -45,6 +93,18 @@
                     "allowNull": false,
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
+                },
+                "roomId": {
+                    "name": "roomId",
+                    "allowNull": true,
+                    "references": {
+                        "model": "rooms",
+                        "key": "id"
+                    },
+                    "onDelete": "SET NULL",
+                    "onUpdate": "CASCADE",
+                    "field": "roomId",
+                    "seqType": "Sequelize.INTEGER"
                 }
             },
             "indexes": []

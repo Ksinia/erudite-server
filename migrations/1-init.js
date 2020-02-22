@@ -6,14 +6,15 @@ var Sequelize = require('sequelize');
  * Actions summary:
  *
  * createTable "SequelizeMeta", deps: []
- * createTable "users", deps: []
+ * createTable "rooms", deps: []
+ * createTable "users", deps: [rooms]
  *
  **/
 
 var info = {
     "revision": 1,
     "name": "noname",
-    "created": "2020-02-21T22:11:16.796Z",
+    "created": "2020-02-22T21:15:55.233Z",
     "comment": ""
 };
 
@@ -34,6 +35,57 @@ var migrationCommands = function(transaction) {
                 },
                 {
                     "charset": "utf8",
+                    "transaction": transaction
+                }
+            ]
+        },
+        {
+            fn: "createTable",
+            params: [
+                "rooms",
+                {
+                    "id": {
+                        "type": Sequelize.INTEGER,
+                        "field": "id",
+                        "autoIncrement": true,
+                        "primaryKey": true,
+                        "allowNull": false
+                    },
+                    "name": {
+                        "type": Sequelize.STRING,
+                        "field": "name",
+                        "unique": true,
+                        "allowNull": false
+                    },
+                    "maxPlayers": {
+                        "type": Sequelize.INTEGER,
+                        "field": "maxPlayers"
+                    },
+                    "phase": {
+                        "type": Sequelize.ENUM('waiting', 'ready', 'started', 'finished'),
+                        "field": "phase",
+                        "defaultValue": "waiting"
+                    },
+                    "turn": {
+                        "type": Sequelize.INTEGER,
+                        "field": "turn"
+                    },
+                    "score": {
+                        "type": Sequelize.JSON,
+                        "field": "score"
+                    },
+                    "createdAt": {
+                        "type": Sequelize.DATE,
+                        "field": "createdAt",
+                        "allowNull": false
+                    },
+                    "updatedAt": {
+                        "type": Sequelize.DATE,
+                        "field": "updatedAt",
+                        "allowNull": false
+                    }
+                },
+                {
                     "transaction": transaction
                 }
             ]
@@ -70,6 +122,18 @@ var migrationCommands = function(transaction) {
                         "type": Sequelize.DATE,
                         "field": "updatedAt",
                         "allowNull": false
+                    },
+                    "roomId": {
+                        "type": Sequelize.INTEGER,
+                        "field": "roomId",
+                        "onUpdate": "CASCADE",
+                        "onDelete": "SET NULL",
+                        "references": {
+                            "model": "rooms",
+                            "key": "id"
+                        },
+                        "allowNull": true,
+                        "name": "roomId"
                     }
                 },
                 {
@@ -83,6 +147,12 @@ var rollbackCommands = function(transaction) {
     return [{
             fn: "dropTable",
             params: ["SequelizeMeta", {
+                transaction: transaction
+            }]
+        },
+        {
+            fn: "dropTable",
+            params: ["rooms", {
                 transaction: transaction
             }]
         },
