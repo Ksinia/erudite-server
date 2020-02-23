@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { Room, user } = require("../models");
+const { Room, user, game } = require("../models");
 const authMiddleware = require("../auth/middleware");
 
 function factory(stream) {
@@ -14,8 +14,8 @@ function factory(stream) {
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          }
-          //   Card
+          },
+          game
         ]
       });
       oldRoom &&
@@ -34,8 +34,8 @@ function factory(stream) {
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          }
-          //   Card
+          },
+          game
         ]
       });
       if (newRoom && newRoom.users.length === newRoom.maxPlayers) {
@@ -51,8 +51,8 @@ function factory(stream) {
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          }
-          //   Card
+          },
+          game
         ]
       });
       const updatedNewRoom = await Room.findByPk(newRoomId, {
@@ -62,8 +62,8 @@ function factory(stream) {
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          }
-          //   Card
+          },
+          game
         ]
       });
       return {

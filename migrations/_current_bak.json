@@ -83,18 +83,6 @@
                     "onUpdate": "CASCADE",
                     "field": "RoomId",
                     "seqType": "Sequelize.INTEGER"
-                },
-                "roomId": {
-                    "name": "roomId",
-                    "allowNull": true,
-                    "references": {
-                        "model": "rooms",
-                        "key": "id"
-                    },
-                    "onDelete": "SET NULL",
-                    "onUpdate": "CASCADE",
-                    "field": "roomId",
-                    "seqType": "Sequelize.INTEGER"
                 }
             },
             "indexes": []
@@ -111,6 +99,7 @@
                 },
                 "name": {
                     "allowNull": false,
+                    "unique": true,
                     "field": "name",
                     "seqType": "Sequelize.STRING"
                 },
@@ -124,6 +113,14 @@
                     },
                     "field": "phase",
                     "seqType": "Sequelize.ENUM('waiting', 'ready', 'started', 'finished')"
+                },
+                "turn": {
+                    "field": "turn",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "score": {
+                    "field": "score",
+                    "seqType": "Sequelize.JSON"
                 },
                 "createdAt": {
                     "allowNull": false,
@@ -197,5 +194,5 @@
             "indexes": []
         }
     },
-    "revision": 3
+    "revision": 2
 }

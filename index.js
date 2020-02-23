@@ -6,6 +6,7 @@ const Sse = require("json-sse");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const roomRouterFactory = require("./routers/room");
+const gameRouterFactory = require("./routers/game");
 const { Room, user } = require("./models");
 
 const app = express();
@@ -20,10 +21,12 @@ app.use(bodyParserMiddleware);
 const stream = new Sse();
 
 const roomRouter = roomRouterFactory(stream);
+const gameRouter = gameRouterFactory(stream);
 
 app.use(signupRouter);
 app.use(loginRouter);
 app.use(roomRouter);
+app.use(gameRouter);
 
 app.get("/", (req, res) => {
   stream.send("test");

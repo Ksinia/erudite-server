@@ -5,14 +5,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       name: {
         type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-        // validate: {
-        //   len: {
-        //     args: [1, 99],
-        //     msg: "Username should not be empty"
-        //   }
-        // }
+        allowNull: false
+        // unique: true
       },
       maxPlayers: {
         type: DataTypes.INTEGER
@@ -24,10 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       phase: {
         type: DataTypes.ENUM("waiting", "ready", "started", "finished"),
         defaultValue: "waiting"
-      },
-      turn: DataTypes.INTEGER,
-      //   passed: { type: Sequelize.INTEGER, defaultValue: null },
-      score: DataTypes.JSON
+      }
     },
     { tableName: "rooms" }
   );
@@ -37,12 +28,12 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: {
         name: "roomId"
       }
-    });
-    // user.hasMany(models.Melody, {
-    //   foreignKey: {
-    //     name: "userId"
-    //   }
-    // });
+    }),
+      Room.hasMany(models.game, {
+        foreignKey: {
+          name: "roomId"
+        }
+      });
   };
   return Room;
 };
