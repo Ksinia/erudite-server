@@ -15,23 +15,17 @@ module.exports = (sequelize, DataTypes) => {
     password: { type: DataTypes.STRING, allowNull: false }
   });
   User.associate = function(models) {
-    User.belongsTo(models.Room, {
+    User.belongsTo(models.room, {
       foreignKey: {
         name: "roomId"
       }
     });
   };
-  // User.associate = function(models) {
-  //   User.hasMany(models.Dictation, {
-  //     foreignKey: {
-  //       name: "userId"
-  //     }
-  //   });
-  //   User.hasMany(models.Melody, {
-  //     foreignKey: {
-  //       name: "userId"
-  //     }
-  //   });
-  // };
+  User.associate = function(models) {
+    User.belongsToMany(models.game, {
+      through: "game_user"
+    });
+  };
+
   return User;
 };

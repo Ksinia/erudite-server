@@ -1,4 +1,5 @@
 "use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Game = sequelize.define("game", {
     letters: {
@@ -12,16 +13,17 @@ module.exports = (sequelize, DataTypes) => {
     turn: DataTypes.INTEGER,
     passedCount: { type: DataTypes.INTEGER, defaultValue: 0 },
     score: DataTypes.JSON,
-    board: DataTypes.JSON,
+    board: {
+      type: DataTypes.JSON,
+      defaultValue: new Array(15).fill(new Array(15).fill(this.cell))
+    },
     confirmCount: DataTypes.INTEGER
   });
   Game.associate = function(models) {
-    Game.hasMany(models.user, {
-      foreignKey: {
-        name: "gameId"
-      }
+    Game.belongsToMany(models.user, {
+      through: "game_user"
     });
-    Game.belongsTo(models.Room);
+    Game.belongsTo(models.room);
   };
   return Game;
 };
