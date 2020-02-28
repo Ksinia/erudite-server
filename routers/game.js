@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
-const { Room, user, game } = require("../models");
+const { room, user, game } = require("../models");
 
 const lettersQuantity = [
   "*-3",
@@ -77,37 +77,69 @@ function createLetterArray(qty, value) {
   const qtyArray = qty.split("-");
   const ValueArray = value.split("-");
   return new Array(parseInt(qtyArray[1])).fill({
-    letter: ValueArray[0],
+    char: ValueArray[0],
     value: parseInt(ValueArray[1])
   });
 }
 
-const letters = lettersQuantity.reduce((acc, letter, index) => {
-  return acc.concat(createLetterArray(letter, lettersValue[index]));
+function shuffle(arr) {
+  return arr.sort(() => Math.random() - 0.5);
+}
+
+const originalLetters = lettersQuantity.reduce((acc, char, index) => {
+  return acc.concat(createLetterArray(char, lettersValue[index]));
 }, []);
 
 function factory(stream) {
   const router = new Router();
 
-  router.put("/start", authMiddleware, async (req, res, nxt) => {
+  router.post("/start", authMiddleware, async (req, res, nxt) => {
     roomId = req.body.roomId;
     try {
-      //достать все юзеров комнаты, добавить их айди в список, перемешать, сохранить как порядок ходов
-      const currentRoom = await Room.findByPk(roomId, {
+      const currentRoom = await room.findByPk(roomId, {
         include: [
           {
             model: user,
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          }
+          },
+          game
         ]
       });
+
+      //сначала надо будет проверить, что в этой комнате нет незаконченной игры
+
       const turnOrder = shuffle(currentRoom.users.map(user => user.id));
-      console.log("turnOrder", turnOrder);
-      //нулевой записать как turn
       const turn = turnOrder[0];
-      // раздать игрокам буквы
+
+      // give letters to players
+      const lettersForGame = shuffle(originalLetters);
+      const acc = { pot: lettersForGame.slice(7 * currentRoom.users.length) };
+      const letters = currentRoom.users.reduce((acc, user, index) => {
+        acc[user.id] = lettersForGame.slice(0 + index * 7, 7 + index * 7);
+        return acc;
+      }, acc);
+      const score = currentRoom.users.reduce((acc, user) => {
+        acc[user.id] = 0;
+        return acc;
+      }, {});
+      const currentGame = await game.create({
+        turnOrder,
+        turn,
+        letters,
+        roomId,
+        score
+      });
+      await currentGame.setUsers(currentRoom.users);
+      await currentRoom.update({ phase: "started" });
+      const action = {
+        type: "NEW_GAME",
+        payload: currentGame
+      };
+      const string = JSON.stringify(action);
+      stream.send(string);
+      res.send(currentGame);
     } catch (error) {
       nxt(error);
     }
