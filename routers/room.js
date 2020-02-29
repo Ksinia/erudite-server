@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { Room, user, game } = require("../models");
+const { room, user, game } = require("../models");
 const authMiddleware = require("../auth/middleware");
 
 function factory(stream) {
@@ -7,7 +7,7 @@ function factory(stream) {
 
   const switchRooms = async (currentUser, newRoomId, next) => {
     try {
-      const oldRoom = await Room.findByPk(currentUser.roomId, {
+      const oldRoom = await room.findByPk(currentUser.roomId, {
         include: [
           {
             model: user,
@@ -15,7 +15,7 @@ function factory(stream) {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
           },
-          game
+          { model: game }
         ]
       });
       oldRoom &&
@@ -27,7 +27,7 @@ function factory(stream) {
       await currentUser.update({
         roomId: newRoomId
       });
-      const newRoom = await Room.findByPk(newRoomId, {
+      const newRoom = await room.findByPk(newRoomId, {
         include: [
           {
             model: user,
@@ -35,7 +35,7 @@ function factory(stream) {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
           },
-          game
+          { model: game }
         ]
       });
       if (newRoom && newRoom.users.length === newRoom.maxPlayers) {
@@ -44,7 +44,7 @@ function factory(stream) {
         });
       }
 
-      const updatedOldRoom = await Room.findByPk(oldRoomId, {
+      const updatedOldRoom = await room.findByPk(oldRoomId, {
         include: [
           {
             model: user,
@@ -55,7 +55,7 @@ function factory(stream) {
           game
         ]
       });
-      const updatedNewRoom = await Room.findByPk(newRoomId, {
+      const updatedNewRoom = await room.findByPk(newRoomId, {
         include: [
           {
             model: user,
@@ -78,15 +78,14 @@ function factory(stream) {
   router.post("/room", authMiddleware, async (req, res, next) => {
     const currentUser = req.user;
     try {
-      const room = await Room.create(req.body);
-      const newRoomId = room.id;
+      const currentRoom = await room.create(req.body);
+      const newRoomId = currentRoom.id;
       const updatedRooms = await switchRooms(currentUser, newRoomId, next);
       const action = {
         type: "NEW_ROOM",
         payload: updatedRooms
       };
       const string = JSON.stringify(action);
-      console.log(string);
       stream.send(string);
       res.send(updatedRooms);
     } catch (error) {

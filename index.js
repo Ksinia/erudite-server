@@ -7,7 +7,7 @@ const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const roomRouterFactory = require("./routers/room");
 const gameRouterFactory = require("./routers/game");
-const { Room, user } = require("./models");
+const { room, user, game } = require("./models");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -35,15 +35,17 @@ app.get("/", (req, res) => {
 
 app.get("/stream", async (req, res, next) => {
   try {
-    const rooms = await Room.findAll({
+    const rooms = await room.findAll({
       include: [
         {
           model: user,
           attributes: {
             exclude: ["password", "createdAt", "updatedAt", "roomId"]
           }
+        },
+        {
+          model: game
         }
-        // Card
       ]
     });
     const action = {

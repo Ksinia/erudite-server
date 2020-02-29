@@ -56,6 +56,10 @@
                     "seqType": "Sequelize.JSON"
                 },
                 "board": {
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
                     "field": "board",
                     "seqType": "Sequelize.JSON"
                 },
@@ -73,19 +77,7 @@
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
                 },
-                "RoomId": {
-                    "allowNull": true,
-                    "references": {
-                        "model": "rooms",
-                        "key": "id"
-                    },
-                    "onDelete": "SET NULL",
-                    "onUpdate": "CASCADE",
-                    "field": "RoomId",
-                    "seqType": "Sequelize.INTEGER"
-                },
                 "roomId": {
-                    "name": "roomId",
                     "allowNull": true,
                     "references": {
                         "model": "rooms",
@@ -94,6 +86,7 @@
                     "onDelete": "SET NULL",
                     "onUpdate": "CASCADE",
                     "field": "roomId",
+                    "name": "roomId",
                     "seqType": "Sequelize.INTEGER"
                 }
             },
@@ -169,18 +162,6 @@
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
                 },
-                "gameId": {
-                    "name": "gameId",
-                    "allowNull": true,
-                    "references": {
-                        "model": "games",
-                        "key": "id"
-                    },
-                    "onDelete": "SET NULL",
-                    "onUpdate": "CASCADE",
-                    "field": "gameId",
-                    "seqType": "Sequelize.INTEGER"
-                },
                 "roomId": {
                     "name": "roomId",
                     "allowNull": true,
@@ -195,7 +176,45 @@
                 }
             },
             "indexes": []
+        },
+        "game_user": {
+            "tableName": "game_user",
+            "schema": {
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "gameId": {
+                    "primaryKey": true,
+                    "references": {
+                        "model": "games",
+                        "key": "id"
+                    },
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE",
+                    "field": "gameId",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "userId": {
+                    "primaryKey": true,
+                    "references": {
+                        "model": "users",
+                        "key": "id"
+                    },
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE",
+                    "field": "userId",
+                    "seqType": "Sequelize.INTEGER"
+                }
+            },
+            "indexes": []
         }
     },
-    "revision": 3
+    "revision": 1
 }

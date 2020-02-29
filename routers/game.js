@@ -108,8 +108,6 @@ function factory(stream) {
         ]
       });
 
-      //сначала надо будет проверить, что в этой комнате нет незаконченной игры
-
       const turnOrder = shuffle(currentRoom.users.map(user => user.id));
       const turn = turnOrder[0];
 
@@ -134,14 +132,55 @@ function factory(stream) {
       await currentGame.setUsers(currentRoom.users);
       await currentRoom.update({ phase: "started" });
       const action = {
-        type: "NEW_GAME",
-        payload: currentGame
+        type: "GAME_UPDATED",
+        payload: { gameId: currentGame.id, currentGame }
       };
       const string = JSON.stringify(action);
       stream.send(string);
       res.send(currentGame);
+      const updatedRoom = await room.findByPk(currentRoom.id, {
+        include: [
+          {
+            model: user,
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          },
+          { model: game }
+        ]
+      });
+      const action2 = {
+        type: "UPDATED_ROOMS",
+        payload: { newRoom: updatedRoom }
+      };
+      const string2 = JSON.stringify(action2);
+      stream.send(string2); // later change to different stream
     } catch (error) {
       nxt(error);
+    }
+  });
+
+  router.get("/game/:id", async (req, res, next) => {
+    const gameId = req.params.id;
+    try {
+      const currentGame = await game.findByPk(gameId, {
+        include: [
+          {
+            model: user,
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          }
+        ]
+      });
+      const action = {
+        type: "GAME_UPDATED",
+        payload: { gameId, currentGame }
+      };
+      const string = JSON.stringify(action);
+      stream.send(string);
+    } catch (error) {
+      next(error);
     }
   });
   return router;
