@@ -73,13 +73,9 @@ const lettersValue = [
   "я-3"
 ];
 
-function createLetterArray(qty, value) {
+function createLetterArray(qty) {
   const qtyArray = qty.split("-");
-  const ValueArray = value.split("-");
-  return new Array(parseInt(qtyArray[1])).fill({
-    char: ValueArray[0],
-    value: parseInt(ValueArray[1])
-  });
+  return Array(parseInt(qtyArray[1])).fill(qtyArray[0]);
 }
 
 function shuffle(arr) {
@@ -87,7 +83,7 @@ function shuffle(arr) {
 }
 
 const originalLetters = lettersQuantity.reduce((acc, char, index) => {
-  return acc.concat(createLetterArray(char, lettersValue[index]));
+  return acc.concat(createLetterArray(char));
 }, []);
 
 function factory(stream) {
@@ -183,6 +179,83 @@ function factory(stream) {
       next(error);
     }
   });
+
+  //turn of the game
+  router.post("/game/:id/turn", authMiddleware, async (req, res, next) => {
+    console.log("post turn");
+    // get user from authmiddleware
+    const user = req.user;
+    const gameId = req.params.id;
+    const userBoard = req.body.userBoard;
+    // check if game is in turn phase
+    const currentGame = await game.findByPk(gameId);
+    if (currentGame.phase !== "turn") {
+      return next("Wrong game phase");
+    }
+    // check if this is user's turn
+    if (currentGame.turn !== user.id) {
+      return next(`It is not turn of user ${user.id}`);
+    }
+    // check if all letters in turn were i user's hand
+    if (
+      userBoard.some(row =>
+        row.some(
+          letter =>
+            letter !== null && !currentGame.letters[user.id].includes(letter)
+        )
+      )
+    ) {
+      return next(`Invalid letters used`);
+    }
+    // check if all letters are placed on empty cells
+    if (
+      userBoard.some((row, y) =>
+        row.some(
+          (letter, x) => letter !== null && currentGame.board[y][x] !== null
+        )
+      )
+    ) {
+      return next("Cell is already occupied");
+    }
+    // add user letters to current board
+    const newBoard = currentGame.board.map((row, y) =>
+      row.map((cell, x) => {
+        if (cell === null && userBoard[y][x] !== null) {
+          return userBoard[y][x];
+        } else {
+          return cell;
+        }
+      })
+    );
+    // copy game board to previous board
+    // change game phase to validation
+    await currentGame.update({
+      previousBoard: currentGame.board,
+      board: newBoard,
+      phase: "validation"
+    });
+    // remove those letters from user hand
+    // fetch game from db
+    const updatedGame = await game.findByPk(gameId, {
+      include: [
+        {
+          model: user,
+          attributes: {
+            exclude: ["password", "createdAt", "updatedAt", "roomId"]
+          }
+        }
+      ]
+    });
+
+    // send action to client
+    const action = {
+      type: "GAME_UPDATED",
+      payload: { gameId, updatedGame }
+    };
+    const string = JSON.stringify(action);
+    stream.send(string);
+  });
+
   return router;
 }
 

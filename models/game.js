@@ -15,7 +15,15 @@ module.exports = (sequelize, DataTypes) => {
     score: DataTypes.JSON,
     board: {
       type: DataTypes.JSON,
-      defaultValue: new Array(15).fill(new Array(15).fill(this.cell))
+      defaultValue: Array(15)
+        .fill(null)
+        .map(row => Array(15).fill(null))
+    },
+    previousBoard: {
+      type: DataTypes.JSON,
+      defaultValue: Array(15)
+        .fill(null)
+        .map(row => Array(15).fill(null))
     },
     confirmCount: DataTypes.INTEGER
   });
