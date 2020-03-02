@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
         .fill(null)
         .map(row => Array(15).fill(null))
     },
-    confirmCount: DataTypes.INTEGER
+    putLetters: { type: DataTypes.JSON, defaultValue: [] }
   });
   Game.associate = function(models) {
     Game.belongsToMany(models.user, {

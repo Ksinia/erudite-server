@@ -86,6 +86,26 @@ const originalLetters = lettersQuantity.reduce((acc, char, index) => {
   return acc.concat(createLetterArray(char));
 }, []);
 
+function getNextTurn(game) {
+  const index = (game.turn + 1) % game.turnOrder.length;
+  return game.turnOrder[index];
+}
+
+function updateGameLetters(game) {
+  const currentUserLetters = game.letters[game.turn];
+  const qty = 7 - currentUserLetters.length;
+  const updatedUserLetters = currentUserLetters.concat(
+    game.letters.pot.slice(0, qty)
+  );
+  const updatedPot = game.letters.pot.slice(qty);
+  const updatedGameLetters = {
+    ...game.letters,
+    [game.turn]: updatedUserLetters,
+    pot: updatedPot
+  };
+  return updatedGameLetters;
+}
+
 function factory(stream) {
   const router = new Router();
 
@@ -163,6 +183,7 @@ function factory(stream) {
         include: [
           {
             model: user,
+            as: "users",
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
@@ -171,7 +192,7 @@ function factory(stream) {
       });
       const action = {
         type: "GAME_UPDATED",
-        payload: { gameId, currentGame }
+        payload: { gameId: gameId, game: currentGame }
       };
       const string = JSON.stringify(action);
       stream.send(string);
@@ -184,76 +205,178 @@ function factory(stream) {
   router.post("/game/:id/turn", authMiddleware, async (req, res, next) => {
     console.log("post turn");
     // get user from authmiddleware
-    const user = req.user;
+    const currentUser = req.user;
+    console.log(currentUser.id, "currentUser.id");
     const gameId = req.params.id;
     const userBoard = req.body.userBoard;
-    // check if game is in turn phase
-    const currentGame = await game.findByPk(gameId);
-    if (currentGame.phase !== "turn") {
-      return next("Wrong game phase");
-    }
-    // check if this is user's turn
-    if (currentGame.turn !== user.id) {
-      return next(`It is not turn of user ${user.id}`);
-    }
-    // check if all letters in turn were i user's hand
-    if (
-      userBoard.some(row =>
-        row.some(
-          letter =>
-            letter !== null && !currentGame.letters[user.id].includes(letter)
+    try {
+      // check if game is in turn phase
+      const currentGame = await game.findByPk(gameId);
+      if (currentGame.phase !== "turn") {
+        return next("Wrong game phase");
+      }
+      // check if this is user's turn
+      if (currentGame.turn !== currentUser.id) {
+        return next(`It is not turn of user ${currentUser.id}`);
+      }
+      // check if all letters in turn were i user's hand
+      if (
+        userBoard.some(row =>
+          row.some(
+            letter =>
+              letter !== null &&
+              !currentGame.letters[currentUser.id].includes(letter)
+          )
         )
-      )
-    ) {
-      return next(`Invalid letters used`);
-    }
-    // check if all letters are placed on empty cells
-    if (
-      userBoard.some((row, y) =>
-        row.some(
-          (letter, x) => letter !== null && currentGame.board[y][x] !== null
+      ) {
+        return next(`Invalid letters used`);
+      }
+      // check if all letters are placed on empty cells
+      if (
+        userBoard.some((row, y) =>
+          row.some(
+            (letter, x) => letter !== null && currentGame.board[y][x] !== null
+          )
         )
-      )
-    ) {
-      return next("Cell is already occupied");
-    }
-    // add user letters to current board
-    const newBoard = currentGame.board.map((row, y) =>
-      row.map((cell, x) => {
-        if (cell === null && userBoard[y][x] !== null) {
-          return userBoard[y][x];
-        } else {
-          return cell;
-        }
-      })
-    );
-    // copy game board to previous board
-    // change game phase to validation
-    await currentGame.update({
-      previousBoard: currentGame.board,
-      board: newBoard,
-      phase: "validation"
-    });
-    // remove those letters from user hand
-    // fetch game from db
-    const updatedGame = await game.findByPk(gameId, {
-      include: [
-        {
-          model: user,
-          attributes: {
-            exclude: ["password", "createdAt", "updatedAt", "roomId"]
+      ) {
+        return next("Cell is already occupied");
+      }
+      // add user letters to current board
+      const newBoard = currentGame.board.map((row, y) =>
+        row.map((cell, x) => {
+          if (cell === null && userBoard[y][x] !== null) {
+            return userBoard[y][x];
+          } else {
+            return cell;
           }
-        }
-      ]
-    });
+        })
+      );
+      // TODO: check if user has passed and update the game accordingly
 
-    // send action to client
-    const action = {
-      type: "GAME_UPDATED",
-      payload: { gameId, updatedGame }
-    };
-    const string = JSON.stringify(action);
-    stream.send(string);
+      // remove those letters from user hand
+      const putLetters = userBoard.reduce((acc, row) => {
+        return acc.concat(
+          row.reduce((accum, cell) => {
+            if (cell) {
+              accum.push(cell);
+            }
+            return accum;
+          }, [])
+        );
+      }, []);
+      putLetters.sort();
+      console.log(putLetters);
+      const temporaryLetters = [...currentGame.letters[currentUser.id]].sort();
+      const keepLetters = temporaryLetters.reduce(
+        (acc, letter) => {
+          if (acc.i === putLetters.length) {
+            acc.letters.push(letter);
+            return acc;
+          }
+          if (letter === putLetters[acc.i]) {
+            acc.i++;
+            return acc;
+          }
+          acc.letters.push(letter);
+          return acc;
+        },
+        { i: 0, letters: [] }
+      ).letters;
+
+      console.log(keepLetters);
+
+      const updatedLetters = {
+        ...currentGame.letters,
+        [currentUser.id]: keepLetters
+      };
+      // copy game board to previous board
+      // change game phase to validation
+      await currentGame.update({
+        previousBoard: currentGame.board,
+        board: newBoard,
+        phase: "validation",
+        letters: updatedLetters,
+        putLetters: putLetters
+      });
+
+      // fetch game from db
+      const updatedGame = await game.findByPk(gameId, {
+        include: [
+          {
+            model: user,
+            as: "users",
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          }
+        ]
+      });
+      const action = {
+        type: "GAME_UPDATED",
+        payload: { gameId: gameId, game: updatedGame }
+      };
+      const string = JSON.stringify(action);
+      console.log(string);
+
+      stream.send(string);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/game/:id/approve", authMiddleware, async (req, res, next) => {
+    console.log("post approve");
+    // get user from authmiddleware
+    const currentUser = req.user;
+    console.log(currentUser.id, "currentUser.id");
+
+    const gameId = req.params.id;
+    try {
+      const currentGame = await game.findByPk(gameId);
+      if (currentGame.phase !== "validation") {
+        return next("Wrong game phase");
+      }
+      // only user who's turn is next, can validate the turn
+      const newTurn = getNextTurn(currentGame);
+      if (
+        !currentGame.turnOrder.includes(currentUser.id) ||
+        currentUser.id !== newTurn
+      ) {
+        return next(`User ${currentUser.id} has no right to approve the turn`);
+      }
+      const updatedGameLetters = updateGameLetters(currentGame);
+
+      await currentGame.update({
+        phase: "turn",
+        turn: newTurn,
+        letters: updatedGameLetters,
+        putLetters: []
+      });
+      const updatedGame = await game.findByPk(gameId, {
+        include: [
+          {
+            model: user,
+            as: "users",
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          }
+        ]
+      });
+      const action = {
+        type: "GAME_UPDATED",
+        payload: {
+          gameId: gameId,
+          game: updatedGame
+        }
+      };
+      const string = JSON.stringify(action);
+      console.log(string);
+
+      stream.send(string);
+    } catch (error) {
+      next(error);
+    }
   });
 
   return router;
