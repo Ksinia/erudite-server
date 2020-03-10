@@ -71,9 +71,13 @@
                     "field": "previousBoard",
                     "seqType": "Sequelize.JSON"
                 },
-                "confirmCount": {
-                    "field": "confirmCount",
-                    "seqType": "Sequelize.INTEGER"
+                "putLetters": {
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
+                    "field": "putLetters",
+                    "seqType": "Sequelize.JSON"
                 },
                 "createdAt": {
                     "allowNull": false,
@@ -224,5 +228,5 @@
             "indexes": []
         }
     },
-    "revision": 2
+    "revision": 3
 }

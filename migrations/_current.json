@@ -41,6 +41,9 @@
                     "seqType": "Sequelize.JSON"
                 },
                 "turn": {
+                    "defaultValue": {
+                        "value": 0
+                    },
                     "field": "turn",
                     "seqType": "Sequelize.INTEGER"
                 },
@@ -228,5 +231,5 @@
             "indexes": []
         }
     },
-    "revision": 3
+    "revision": 4
 }

@@ -87,20 +87,23 @@ const originalLetters = lettersQuantity.reduce((acc, char, index) => {
 }, []);
 
 function getNextTurn(game) {
-  const index = (game.turn + 1) % game.turnOrder.length;
-  return game.turnOrder[index];
+  return (game.turn + 1) % game.turnOrder.length;
 }
 
 function updateGameLetters(game) {
-  const currentUserLetters = game.letters[game.turn];
-  const qty = 7 - currentUserLetters.length;
+  const currentUserId = game.turnOrder[game.turn];
+  const currentUserLetters = game.letters[currentUserId];
+  let requiredQty = 7 - currentUserLetters.length;
+  if (game.letters.pot.length < requiredQty) {
+    requiredQty = game.letters.pot.length;
+  }
   const updatedUserLetters = currentUserLetters.concat(
-    game.letters.pot.slice(0, qty)
+    game.letters.pot.slice(0, requiredQty)
   );
-  const updatedPot = game.letters.pot.slice(qty);
+  const updatedPot = game.letters.pot.slice(requiredQty);
   const updatedGameLetters = {
     ...game.letters,
-    [game.turn]: updatedUserLetters,
+    [currentUserId]: updatedUserLetters,
     pot: updatedPot
   };
   return updatedGameLetters;
@@ -125,7 +128,6 @@ function factory(stream) {
       });
 
       const turnOrder = shuffle(currentRoom.users.map(user => user.id));
-      const turn = turnOrder[0];
 
       // give letters to players
       const lettersForGame = shuffle(originalLetters);
@@ -140,7 +142,6 @@ function factory(stream) {
       }, {});
       const currentGame = await game.create({
         turnOrder,
-        turn,
         letters,
         roomId,
         score
@@ -170,6 +171,7 @@ function factory(stream) {
         payload: { newRoom: updatedRoom }
       };
       const string2 = JSON.stringify(action2);
+      res.send(updatedRoom);
       stream.send(string2); // later change to different stream
     } catch (error) {
       nxt(error);
@@ -195,6 +197,7 @@ function factory(stream) {
         payload: { gameId: gameId, game: currentGame }
       };
       const string = JSON.stringify(action);
+      res.send(currentGame);
       stream.send(string);
     } catch (error) {
       next(error);
@@ -203,7 +206,6 @@ function factory(stream) {
 
   //turn of the game
   router.post("/game/:id/turn", authMiddleware, async (req, res, next) => {
-    console.log("post turn");
     // get user from authmiddleware
     const currentUser = req.user;
     console.log(currentUser.id, "currentUser.id");
@@ -213,91 +215,114 @@ function factory(stream) {
       // check if game is in turn phase
       const currentGame = await game.findByPk(gameId);
       if (currentGame.phase !== "turn") {
-        return next("Wrong game phase");
+        return next(`Wrong game phase: ${currentGame.phase}`);
       }
       // check if this is user's turn
-      if (currentGame.turn !== currentUser.id) {
+      if (currentGame.turnOrder[currentGame.turn] !== currentUser.id) {
         return next(`It is not turn of user ${currentUser.id}`);
       }
-      // check if all letters in turn were i user's hand
-      if (
-        userBoard.some(row =>
-          row.some(
-            letter =>
-              letter !== null &&
-              !currentGame.letters[currentUser.id].includes(letter)
+      // check if user passed
+      if (!userBoard.some(row => row.some(letter => letter))) {
+        // copy game board to previous board
+        // change game phase to next turn, no need to validate pass
+        // change passedCount qty
+        const newPassedQty = currentGame.passedCount + 1;
+        if (newPassedQty === currentGame.turnOrder.length) {
+          await currentGame.update({
+            phase: "finished",
+            passedCount: newPassedQty
+          });
+        } else {
+          await currentGame.update({
+            previousBoard: currentGame.board,
+            phase: "turn",
+            turn: getNextTurn(currentGame),
+            passedCount: newPassedQty
+          });
+        }
+      } else {
+        // check if all letters in turn were i user's hand
+        if (
+          userBoard.some(row =>
+            row.some(
+              letter =>
+                letter !== null &&
+                !currentGame.letters[currentUser.id].includes(letter)
+            )
           )
-        )
-      ) {
-        return next(`Invalid letters used`);
-      }
-      // check if all letters are placed on empty cells
-      if (
-        userBoard.some((row, y) =>
-          row.some(
-            (letter, x) => letter !== null && currentGame.board[y][x] !== null
+        ) {
+          return next(`Invalid letters used`);
+        }
+        // check if all letters are placed on empty cells
+        if (
+          userBoard.some((row, y) =>
+            row.some(
+              (letter, x) => letter !== null && currentGame.board[y][x] !== null
+            )
           )
-        )
-      ) {
-        return next("Cell is already occupied");
-      }
-      // add user letters to current board
-      const newBoard = currentGame.board.map((row, y) =>
-        row.map((cell, x) => {
-          if (cell === null && userBoard[y][x] !== null) {
-            return userBoard[y][x];
-          } else {
-            return cell;
-          }
-        })
-      );
-      // TODO: check if user has passed and update the game accordingly
-
-      // remove those letters from user hand
-      const putLetters = userBoard.reduce((acc, row) => {
-        return acc.concat(
-          row.reduce((accum, cell) => {
-            if (cell) {
-              accum.push(cell);
+        ) {
+          return next("Cell is already occupied");
+        }
+        // add user letters to current board
+        const newBoard = currentGame.board.map((row, y) =>
+          row.map((cell, x) => {
+            if (cell === null && userBoard[y][x] !== null) {
+              return userBoard[y][x];
+            } else {
+              return cell;
             }
-            return accum;
-          }, [])
+          })
         );
-      }, []);
-      putLetters.sort();
-      console.log(putLetters);
-      const temporaryLetters = [...currentGame.letters[currentUser.id]].sort();
-      const keepLetters = temporaryLetters.reduce(
-        (acc, letter) => {
-          if (acc.i === putLetters.length) {
+
+        // remove those letters from user hand
+        const putLetters = userBoard.reduce((acc, row) => {
+          return acc.concat(
+            row.reduce((accum, cell) => {
+              if (cell) {
+                accum.push(cell);
+              }
+              return accum;
+            }, [])
+          );
+        }, []);
+
+        // extract put letters from all letters
+        putLetters.sort();
+        const temporaryLetters = [
+          ...currentGame.letters[currentUser.id]
+        ].sort();
+        const keepLetters = temporaryLetters.reduce(
+          (acc, letter) => {
+            if (acc.i === putLetters.length) {
+              acc.letters.push(letter);
+              return acc;
+            }
+            if (letter === putLetters[acc.i]) {
+              acc.i++;
+              return acc;
+            }
             acc.letters.push(letter);
             return acc;
-          }
-          if (letter === putLetters[acc.i]) {
-            acc.i++;
-            return acc;
-          }
-          acc.letters.push(letter);
-          return acc;
-        },
-        { i: 0, letters: [] }
-      ).letters;
+          },
+          { i: 0, letters: [] }
+        ).letters;
 
-      console.log(keepLetters);
-
-      const updatedLetters = {
-        ...currentGame.letters,
-        [currentUser.id]: keepLetters
-      };
-      // copy game board to previous board
-      // change game phase to validation
-      await currentGame.update({
-        previousBoard: currentGame.board,
-        board: newBoard,
-        phase: "validation",
-        letters: updatedLetters,
-        putLetters: putLetters
-      });
+        const updatedLetters = {
+          ...currentGame.letters,
+          [currentUser.id]: keepLetters
+        };
+        // copy game board to previous board
+        // change game phase to validation
+        // return passedCount to 0
+        await currentGame.update({
+          previousBoard: currentGame.board,
+          board: newBoard,
+          phase: "validation",
+          letters: updatedLetters,
+          putLetters: putLetters,
+          passedCount: 0
+        });
+      }
 
       // fetch game from db
       const updatedGame = await game.findByPk(gameId, {
@@ -316,8 +341,7 @@ function factory(stream) {
         payload: { gameId: gameId, game: updatedGame }
       };
       const string = JSON.stringify(action);
-      console.log(string);
-
+      res.send(updatedGame);
       stream.send(string);
     } catch (error) {
       next(error);
@@ -325,7 +349,6 @@ function factory(stream) {
   });
 
   router.post("/game/:id/approve", authMiddleware, async (req, res, next) => {
-    console.log("post approve");
     // get user from authmiddleware
     const currentUser = req.user;
     console.log(currentUser.id, "currentUser.id");
@@ -340,7 +363,7 @@ function factory(stream) {
       const newTurn = getNextTurn(currentGame);
       if (
         !currentGame.turnOrder.includes(currentUser.id) ||
-        currentUser.id !== newTurn
+        currentUser.id !== currentGame.turnOrder[newTurn]
       ) {
         return next(`User ${currentUser.id} has no right to approve the turn`);
       }
@@ -371,8 +394,7 @@ function factory(stream) {
         }
       };
       const string = JSON.stringify(action);
-      console.log(string);
-
+      res.send(updatedGame);
       stream.send(string);
     } catch (error) {
       next(error);

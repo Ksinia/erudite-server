@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: "turn"
     },
     turnOrder: DataTypes.JSON,
-    turn: DataTypes.INTEGER,
+    turn: { type: DataTypes.INTEGER, defaultValue: 0 },
     passedCount: { type: DataTypes.INTEGER, defaultValue: 0 },
     score: DataTypes.JSON,
     board: {
