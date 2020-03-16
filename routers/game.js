@@ -72,6 +72,66 @@ const lettersValue = [
   "ю-10",
   "я-3"
 ];
+const values = {
+  "*": 0,
+  а: 1,
+  б: 3,
+  в: 2,
+  г: 3,
+  д: 2,
+  е: 1,
+  ж: 5,
+  з: 5,
+  и: 1,
+  й: 2,
+  к: 2,
+  л: 2,
+  м: 2,
+  н: 1,
+  о: 1,
+  п: 2,
+  р: 2,
+  с: 2,
+  т: 2,
+  у: 3,
+  ф: 10,
+  х: 5,
+  ц: 10,
+  ч: 5,
+  ш: 10,
+  щ: 10,
+  ъ: 10,
+  ы: 5,
+  ь: 5,
+  э: 10,
+  ю: 10,
+  я: 3
+};
+
+const wordBonuses = {
+  0: { 0: 3, 7: 3, 14: 3 },
+  1: { 5: 2, 9: 2 },
+  5: { 1: 2, 13: 2 },
+  7: { 0: 3, 14: 3 },
+  9: { 1: 2, 13: 2 },
+  13: { 5: 2, 9: 2 },
+  14: { 0: 3, 7: 3, 14: 3 }
+};
+const letterBonuses = {
+  0: { 3: 2, 11: 2 },
+  1: { 1: 3, 13: 3 },
+  2: { 2: 3, 6: 2, 8: 2, 12: 3 },
+  3: { 0: 2, 3: 3, 7: 2, 11: 3, 14: 2 },
+  4: { 4: 3, 10: 3 },
+  6: { 2: 2, 6: 2, 8: 2, 12: 2 },
+  7: { 3: 2, 11: 2 },
+  8: { 2: 2, 6: 2, 8: 2, 12: 2 },
+  10: { 4: 3, 10: 3 },
+  11: { 0: 2, 3: 3, 7: 2, 11: 3, 14: 2 },
+  12: { 2: 3, 6: 2, 8: 2, 12: 3 },
+  13: { 1: 3, 13: 3 },
+  14: { 3: 2, 11: 2 }
+};
 
 function createLetterArray(qty) {
   const qtyArray = qty.split("-");
@@ -107,6 +167,154 @@ function updateGameLetters(game) {
     pot: updatedPot
   };
   return updatedGameLetters;
+}
+// как найти слово? Находим букву, двигаемся влево от нее по обеим доскам, пока не найдем пустую
+// клетку. Затем двигаемся вправо от нее по обеим доскам пока не найдем пустую клетку. Если
+// между пустыми клетками 1 клетка, то это не слово. В противном случае - слово. Проверяем,
+// на что умножать слово. Добавляем стоимость всех букв, проверяя умножение каждой буквы.
+// умножаем слово. Прибавляем к очкам. Как найти следующее слово и не повториться?
+// слово это вектор от ху до ху.
+// слова проверяем только для тех букв, которые не ходятся внутри этих векторов. Но только по
+// горзизонтали. Слова по вертикали ищем только после того,как нашли все слова по горизонтали.
+function getHorizontalWords(board, previousBoard) {
+  return board.reduce((boardWords, row, yIndex) => {
+    return boardWords.concat(
+      row.reduce((lineWords, cell, xIndex) => {
+        if (
+          cell !== previousBoard[yIndex][xIndex] &&
+          // this cell is not counted in words yet
+          !lineWords.find(
+            word =>
+              word.y == yIndex && word.x <= xIndex && word.x + word.len > xIndex
+          )
+        ) {
+          // start to search for the beginning of the word
+          // move left while xIndex < 0 or cell is empty
+          let leftIndex = xIndex;
+          while (true) {
+            leftIndex--;
+            if (
+              leftIndex < 0 ||
+              (!board[yIndex][leftIndex] && !previousBoard[yIndex][leftIndex])
+            ) {
+              leftIndex++;
+              break;
+            }
+          }
+          // move right till xIndex >= 15 or cell is empty
+          let rightIndex = xIndex;
+          while (true) {
+            rightIndex++;
+            if (
+              rightIndex >= row.length ||
+              (!board[yIndex][rightIndex] && !previousBoard[yIndex][rightIndex])
+            ) {
+              break;
+            }
+          }
+          const len = rightIndex - leftIndex;
+          if (len >= 2) {
+            lineWords.push({
+              y: yIndex,
+              x: leftIndex,
+              len: len,
+              word: board[yIndex].slice(leftIndex, rightIndex)
+            });
+          }
+        }
+        return lineWords;
+      }, [])
+    );
+  }, []);
+}
+
+function rotate(board) {
+  return Array(15)
+    .fill(null)
+    .map((_, index) => board.map(row => row[index]));
+}
+
+function score(game) {
+  const horizontalWords = getHorizontalWords(game.board, game.previousBoard);
+  const rotatedBoard = rotate(game.board);
+  const rotatedPreviousBoard = rotate(game.previousBoard);
+  const verticalWords = getHorizontalWords(rotatedBoard, rotatedPreviousBoard);
+  // console.log("horizontal words", horizontalWords);
+  // console.log("vertical words", verticalWords);
+
+  const horizontalScore = horizontalWords.reduce((score, word) => {
+    let wordMultiplier = 0;
+    for (let i = word.x; i <= word.x + word.len; i++) {
+      if (
+        wordBonuses[word.y] &&
+        wordBonuses[word.y][i] &&
+        // check if it is not a letter of previous player
+        !game.previousBoard[word.y][i]
+      ) {
+        wordMultiplier += wordBonuses[word.y][i];
+      }
+    }
+    if (wordMultiplier === 0) {
+      wordMultiplier = 1;
+    }
+    return (
+      score +
+      wordMultiplier *
+        word.word.reduce((wordScore, letter, index) => {
+          let letterMultiplier = 1;
+          if (
+            letterBonuses[word.y] &&
+            letterBonuses[word.y][word.x + index] &&
+            // check if it is not a letter of previous player
+            !game.previousBoard[word.y][word.x + index]
+          ) {
+            letterMultiplier = letterBonuses[word.y][word.x + index];
+          }
+          return wordScore + values[letter] * letterMultiplier;
+        }, 0)
+    );
+  }, 0);
+  const verticalScore = verticalWords.reduce((score, word) => {
+    let wordMultiplier = 0;
+    for (let i = word.x; i <= word.x + word.len; i++) {
+      if (
+        wordBonuses[word.y] &&
+        wordBonuses[word.y][i] &&
+        // check if it is not a letter of previous player
+        !rotate(game.previousBoard)[word.y][i]
+      ) {
+        wordMultiplier += wordBonuses[word.y][i];
+      }
+    }
+    if (wordMultiplier === 0) {
+      wordMultiplier = 1;
+    }
+    return (
+      score +
+      wordMultiplier *
+        word.word.reduce((wordScore, letter, index) => {
+          let letterMultiplier = 1;
+          if (
+            letterBonuses[word.y] &&
+            letterBonuses[word.y][word.x + index] &&
+            // check if it is not a letter of previous player
+            !rotate(game.previousBoard)[word.y][word.x + index]
+          ) {
+            letterMultiplier = letterBonuses[word.y][word.x + index];
+          }
+          return wordScore + values[letter] * letterMultiplier;
+        }, 0)
+    );
+  }, 0);
+  let allScore = horizontalScore + verticalScore;
+  const currentUserId = game.turnOrder[game.turn];
+  if (game.letters[currentUserId].length === 0) {
+    allScore += 15;
+  }
+  return {
+    ...game.score,
+    [currentUserId]: (game.score[currentUserId] += allScore)
+  };
 }
 
 function factory(stream) {
@@ -154,7 +362,7 @@ function factory(stream) {
       };
       const string = JSON.stringify(action);
       stream.send(string);
-      res.send(currentGame);
+      res.send(JSON.stringify(currentGame.id));
       const updatedRoom = await room.findByPk(currentRoom.id, {
         include: [
           {
@@ -171,7 +379,6 @@ function factory(stream) {
         payload: { newRoom: updatedRoom }
       };
       const string2 = JSON.stringify(action2);
-      res.send(updatedRoom);
       stream.send(string2); // later change to different stream
     } catch (error) {
       nxt(error);
@@ -197,7 +404,7 @@ function factory(stream) {
         payload: { gameId: gameId, game: currentGame }
       };
       const string = JSON.stringify(action);
-      res.send(currentGame);
+      res.send(JSON.stringify(currentGame.id));
       stream.send(string);
     } catch (error) {
       next(error);
@@ -208,7 +415,6 @@ function factory(stream) {
   router.post("/game/:id/turn", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
     const currentUser = req.user;
-    console.log(currentUser.id, "currentUser.id");
     const gameId = req.params.id;
     const userBoard = req.body.userBoard;
     try {
@@ -341,7 +547,7 @@ function factory(stream) {
         payload: { gameId: gameId, game: updatedGame }
       };
       const string = JSON.stringify(action);
-      res.send(updatedGame);
+      res.send(JSON.stringify(updatedGame.id));
       stream.send(string);
     } catch (error) {
       next(error);
@@ -351,8 +557,6 @@ function factory(stream) {
   router.post("/game/:id/approve", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
     const currentUser = req.user;
-    console.log(currentUser.id, "currentUser.id");
-
     const gameId = req.params.id;
     try {
       const currentGame = await game.findByPk(gameId);
@@ -368,12 +572,14 @@ function factory(stream) {
         return next(`User ${currentUser.id} has no right to approve the turn`);
       }
       const updatedGameLetters = updateGameLetters(currentGame);
+      const updatedScore = score(currentGame);
 
       await currentGame.update({
         phase: "turn",
         turn: newTurn,
         letters: updatedGameLetters,
-        putLetters: []
+        putLetters: [],
+        score: updatedScore
       });
       const updatedGame = await game.findByPk(gameId, {
         include: [
@@ -394,7 +600,7 @@ function factory(stream) {
         }
       };
       const string = JSON.stringify(action);
-      res.send(updatedGame);
+      res.send(JSON.stringify(updatedGame.id));
       stream.send(string);
     } catch (error) {
       next(error);
