@@ -5,89 +5,33 @@ const authMiddleware = require("../auth/middleware");
 function factory(stream) {
   const router = new Router();
 
-  const switchRooms = async (currentUser, newRoomId, next) => {
-    try {
-      const oldRoom = await room.findByPk(currentUser.roomId, {
-        include: [
-          {
-            model: user,
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
-            }
-          },
-          { model: game }
-        ]
-      });
-      oldRoom &&
-        (await oldRoom.update({
-          phase: "waiting"
-        }));
-      const oldRoomId = oldRoom ? oldRoom.id : null;
-
-      await currentUser.update({
-        roomId: newRoomId
-      });
-      const newRoom = await room.findByPk(newRoomId, {
-        include: [
-          {
-            model: user,
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
-            }
-          },
-          { model: game }
-        ]
-      });
-      if (newRoom && newRoom.users.length === newRoom.maxPlayers) {
-        await newRoom.update({
-          phase: "ready"
-        });
-      }
-
-      const updatedOldRoom = await room.findByPk(oldRoomId, {
-        include: [
-          {
-            model: user,
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
-            }
-          },
-          game
-        ]
-      });
-      const updatedNewRoom = await room.findByPk(newRoomId, {
-        include: [
-          {
-            model: user,
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
-            }
-          },
-          game
-        ]
-      });
-      return {
-        oldRoom: updatedOldRoom,
-        newRoom: updatedNewRoom
-      };
-    } catch (error) {
-      next(error);
-    }
-  };
-
   router.post("/room", authMiddleware, async (req, res, next) => {
     const currentUser = req.user;
     try {
       const currentRoom = await room.create(req.body);
       const newRoomId = currentRoom.id;
-      const updatedRooms = await switchRooms(currentUser, newRoomId, next);
+      await currentRoom.setUsers([currentUser]);
+      const updatedRoom = await room.findByPk(newRoomId, {
+        include: [
+          {
+            model: user,
+            as: "users",
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          },
+          game
+        ]
+      });
       const action = {
         type: "NEW_ROOM",
-        payload: updatedRooms
+        payload: updatedRoom
       };
       const string = JSON.stringify(action);
+      console.log(string);
+
       stream.send(string);
-      res.send(updatedRooms);
+      res.send(updatedRoom);
     } catch (error) {
       next(error);
     }
@@ -97,12 +41,42 @@ function factory(stream) {
     const currentUser = req.user;
     const newRoomId = req.body.newRoomId;
     try {
-      const updatedRooms = await switchRooms(currentUser, newRoomId, next);
+      const currentRoom = await room.findByPk(newRoomId, {
+        include: [
+          {
+            model: user,
+            as: "users",
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          }
+        ]
+      });
+      const updatedUsers = currentRoom.users.concat([currentUser]);
+      if (updatedUsers.length === currentRoom.maxPlayers) {
+        await currentRoom.update({
+          phase: "ready"
+        });
+      }
+      await currentRoom.setUsers(updatedUsers);
+      const updatedRoom = await room.findByPk(newRoomId, {
+        include: [
+          {
+            model: user,
+            as: "users",
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          },
+          game
+        ]
+      });
       const action = {
-        type: "UPDATED_ROOMS",
-        payload: updatedRooms
+        type: "UPDATED_ROOM",
+        payload: updatedRoom
       };
       const string = JSON.stringify(action);
+      console.log(string);
       stream.send(string);
       res.send(string);
     } catch (error) {
