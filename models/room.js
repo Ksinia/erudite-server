@@ -1,10 +1,6 @@
 "use strict";
 module.exports = (sequelize, DataTypes) => {
   const Room = sequelize.define("room", {
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
     maxPlayers: {
       type: DataTypes.INTEGER
     },
@@ -14,10 +10,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   });
   Room.associate = function(models) {
-    Room.hasMany(models.user, {
-      foreignKey: {
-        name: "roomId"
-      }
+    Room.belongsToMany(models.user, {
+      through: "room_user"
     }),
       Room.hasMany(models.game, {
         foreignKey: {
