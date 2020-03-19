@@ -327,6 +327,7 @@ function factory(stream) {
         include: [
           {
             model: user,
+            as: "users",
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
@@ -362,21 +363,22 @@ function factory(stream) {
       };
       const string = JSON.stringify(action);
       stream.send(string);
-      res.send(JSON.stringify(currentGame.id));
+      res.send(currentGame);
       const updatedRoom = await room.findByPk(currentRoom.id, {
         include: [
           {
             model: user,
+            as: "users",
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
           },
-          { model: game }
+          game
         ]
       });
       const action2 = {
-        type: "UPDATED_ROOMS",
-        payload: { newRoom: updatedRoom }
+        type: "UPDATED_ROOM",
+        payload: updatedRoom
       };
       const string2 = JSON.stringify(action2);
       stream.send(string2); // later change to different stream
@@ -419,7 +421,9 @@ function factory(stream) {
     const userBoard = req.body.userBoard;
     try {
       // check if game is in turn phase
-      const currentGame = await game.findByPk(gameId);
+      const currentGame = await game.findByPk(gameId, {
+        include: room
+      });
       if (currentGame.phase !== "turn") {
         return next(`Wrong game phase: ${currentGame.phase}`);
       }
@@ -433,11 +437,32 @@ function factory(stream) {
         // change game phase to next turn, no need to validate pass
         // change passedCount qty
         const newPassedQty = currentGame.passedCount + 1;
-        if (newPassedQty === currentGame.turnOrder.length) {
+        if (newPassedQty === currentGame.turnOrder.length * 2) {
           await currentGame.update({
             phase: "finished",
             passedCount: newPassedQty
           });
+          await currentGame.room.update({
+            phase: "ready"
+          });
+          const updatedRoom = await room.findByPk(currentGame.roomId, {
+            include: [
+              {
+                model: user,
+                as: "users",
+                attributes: {
+                  exclude: ["password", "createdAt", "updatedAt", "roomId"]
+                }
+              },
+              game
+            ]
+          });
+          const action2 = {
+            type: "UPDATED_ROOM",
+            payload: updatedRoom
+          };
+          const string2 = JSON.stringify(action2);
+          stream.send(string2);
         } else {
           await currentGame.update({
             previousBoard: currentGame.board,
