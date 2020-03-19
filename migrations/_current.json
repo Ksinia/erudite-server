@@ -117,11 +117,6 @@
                     "field": "id",
                     "seqType": "Sequelize.INTEGER"
                 },
-                "name": {
-                    "allowNull": false,
-                    "field": "name",
-                    "seqType": "Sequelize.STRING"
-                },
                 "maxPlayers": {
                     "field": "maxPlayers",
                     "seqType": "Sequelize.INTEGER"
@@ -176,18 +171,6 @@
                     "allowNull": false,
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
-                },
-                "roomId": {
-                    "name": "roomId",
-                    "allowNull": true,
-                    "references": {
-                        "model": "rooms",
-                        "key": "id"
-                    },
-                    "onDelete": "SET NULL",
-                    "onUpdate": "CASCADE",
-                    "field": "roomId",
-                    "seqType": "Sequelize.INTEGER"
                 }
             },
             "indexes": []
@@ -229,7 +212,45 @@
                 }
             },
             "indexes": []
+        },
+        "room_user": {
+            "tableName": "room_user",
+            "schema": {
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "roomId": {
+                    "primaryKey": true,
+                    "references": {
+                        "model": "rooms",
+                        "key": "id"
+                    },
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE",
+                    "field": "roomId",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "userId": {
+                    "primaryKey": true,
+                    "references": {
+                        "model": "users",
+                        "key": "id"
+                    },
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE",
+                    "field": "userId",
+                    "seqType": "Sequelize.INTEGER"
+                }
+            },
+            "indexes": []
         }
     },
-    "revision": 4
+    "revision": 6
 }
