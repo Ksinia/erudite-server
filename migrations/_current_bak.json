@@ -117,11 +117,6 @@
                     "field": "id",
                     "seqType": "Sequelize.INTEGER"
                 },
-                "name": {
-                    "allowNull": false,
-                    "field": "name",
-                    "seqType": "Sequelize.STRING"
-                },
                 "maxPlayers": {
                     "field": "maxPlayers",
                     "seqType": "Sequelize.INTEGER"
@@ -257,5 +252,5 @@
             "indexes": []
         }
     },
-    "revision": 5
+    "revision": 6
 }

@@ -37,41 +37,7 @@ const lettersQuantity = [
   "ю-1",
   "я-3"
 ];
-const lettersValue = [
-  "*-0",
-  "а-1",
-  "б-3",
-  "в-2",
-  "г-3",
-  "д-2",
-  "е-1",
-  "ж-5",
-  "з-5",
-  "и-1",
-  "й-2",
-  "к-2",
-  "л-2",
-  "м-2",
-  "н-1",
-  "о-1",
-  "п-2",
-  "р-2",
-  "с-2",
-  "т-2",
-  "у-3",
-  "ф-10",
-  "х-5",
-  "ц-10",
-  "ч-5",
-  "ш-10",
-  "щ-10",
-  "ъ-10",
-  "ы-5",
-  "ь-5",
-  "э-10",
-  "ю-10",
-  "я-3"
-];
+
 const values = {
   "*": 0,
   а: 1,
@@ -551,7 +517,8 @@ function factory(stream) {
           phase: "validation",
           letters: updatedLetters,
           putLetters: putLetters,
-          passedCount: 0
+          passedCount: 0,
+          validated: "unknown"
         });
       }
 
@@ -583,6 +550,9 @@ function factory(stream) {
     // get user from authmiddleware
     const currentUser = req.user;
     const gameId = req.params.id;
+    const validation = req.body.validation;
+    console.log(validation);
+
     try {
       const currentGame = await game.findByPk(gameId);
       if (currentGame.phase !== "validation") {
@@ -596,15 +566,76 @@ function factory(stream) {
       ) {
         return next(`User ${currentUser.id} has no right to approve the turn`);
       }
-      const updatedGameLetters = updateGameLetters(currentGame);
-      const updatedScore = score(currentGame);
 
+      if (validation === "yes") {
+        const updatedGameLetters = updateGameLetters(currentGame);
+        const updatedScore = score(currentGame);
+
+        await currentGame.update({
+          phase: "turn",
+          turn: newTurn,
+          letters: updatedGameLetters,
+          putLetters: [],
+          score: updatedScore,
+          validated: "yes"
+        });
+      } else if (validation === "no") {
+        await currentGame.update({
+          validated: "no"
+        });
+      }
+      const updatedGame = await game.findByPk(gameId, {
+        include: [
+          {
+            model: user,
+            as: "users",
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+            }
+          }
+        ]
+      });
+      const action = {
+        type: "GAME_UPDATED",
+        payload: {
+          gameId: gameId,
+          game: updatedGame
+        }
+      };
+      const string = JSON.stringify(action);
+      res.send(JSON.stringify(updatedGame.id));
+      stream.send(string);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/game/:id/undo", authMiddleware, async (req, res, next) => {
+    // get user from authmiddleware
+    const currentUser = req.user;
+    const gameId = req.params.id;
+    try {
+      const currentGame = await game.findByPk(gameId);
+      if (currentGame.phase !== "validation") {
+        return next("Wrong game phase");
+      }
+      // only user can only undo own turn
+      if (
+        !currentGame.turnOrder.includes(currentUser.id) ||
+        currentUser.id !== currentGame.turnOrder[currentGame.turn]
+      ) {
+        return next(`User ${currentUser.id} has no right to undo the turn`);
+      }
       await currentGame.update({
+        board: currentGame.previousBoard,
         phase: "turn",
-        turn: newTurn,
-        letters: updatedGameLetters,
-        putLetters: [],
-        score: updatedScore
+        letters: {
+          ...currentGame.letters,
+          [currentUser.id]: currentGame.letters[currentUser.id].concat(
+            currentGame.putLetters
+          )
+        },
+        putLetters: []
       });
       const updatedGame = await game.findByPk(gameId, {
         include: [

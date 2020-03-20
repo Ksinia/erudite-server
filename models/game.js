@@ -9,6 +9,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM("turn", "validation", "finished"),
       defaultValue: "turn"
     },
+    validated: {
+      type: DataTypes.ENUM("unknown", "yes", "no"),
+      defaultValue: "unknown"
+    },
     turnOrder: DataTypes.JSON,
     turn: { type: DataTypes.INTEGER, defaultValue: 0 },
     passedCount: { type: DataTypes.INTEGER, defaultValue: 0 },
