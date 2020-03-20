@@ -123,14 +123,19 @@ function updateGameLetters(game) {
   if (game.letters.pot.length < requiredQty) {
     requiredQty = game.letters.pot.length;
   }
-  const updatedUserLetters = currentUserLetters.concat(
-    game.letters.pot.slice(0, requiredQty)
-  );
-  const updatedPot = game.letters.pot.slice(requiredQty);
+  let newLetters = [];
+  while (newLetters.length !== requiredQty) {
+    newLetters.push(
+      game.letters.pot.splice(
+        Math.floor(Math.random() * game.letters.pot.length),
+        1
+      )[0]
+    );
+  }
+  const updatedUserLetters = currentUserLetters.concat(newLetters);
   const updatedGameLetters = {
     ...game.letters,
-    [currentUserId]: updatedUserLetters,
-    pot: updatedPot
+    [currentUserId]: updatedUserLetters
   };
   return updatedGameLetters;
 }
@@ -306,9 +311,16 @@ function factory(stream) {
 
       // give letters to players
       const lettersForGame = shuffle(originalLetters);
-      const acc = { pot: lettersForGame.slice(7 * currentRoom.users.length) };
-      const letters = currentRoom.users.reduce((acc, user, index) => {
-        acc[user.id] = lettersForGame.slice(0 + index * 7, 7 + index * 7);
+      let acc = { pot: lettersForGame.slice() };
+      const letters = currentRoom.users.reduce((acc, user) => {
+        if (!acc[user.id]) {
+          acc[user.id] = [];
+        }
+        while (acc[user.id].length !== 7) {
+          acc[user.id].push(
+            acc.pot.splice(Math.floor(Math.random() * acc.pot.length), 1)[0]
+          );
+        }
         return acc;
       }, acc);
       const score = currentRoom.users.reduce((acc, user) => {
