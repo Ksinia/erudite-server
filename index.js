@@ -19,9 +19,10 @@ app.use(corsMiddleware);
 app.use(bodyParserMiddleware);
 
 const stream = new Sse();
+const gameStream = new Sse();
 
 const roomRouter = roomRouterFactory(stream);
-const gameRouter = gameRouterFactory(stream);
+const gameRouter = gameRouterFactory(gameStream);
 
 app.use(signupRouter);
 app.use(loginRouter);

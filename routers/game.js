@@ -359,7 +359,7 @@ function factory(stream) {
         payload: updatedRoom
       };
       const string2 = JSON.stringify(action2);
-      stream.send(string2); // later change to different stream
+      stream.send(string2);
     } catch (error) {
       nxt(error);
     }
@@ -384,7 +384,8 @@ function factory(stream) {
         payload: { gameId: gameId, game: currentGame }
       };
       const string = JSON.stringify(action);
-      res.send(JSON.stringify(currentGame.id));
+      stream.updateInit(string);
+      stream.init(req, res);
       stream.send(string);
     } catch (error) {
       next(error);
