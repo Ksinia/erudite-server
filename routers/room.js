@@ -19,8 +19,7 @@ function factory(stream) {
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          },
-          game
+          }
         ]
       });
       const action = {
@@ -28,7 +27,6 @@ function factory(stream) {
         payload: updatedRoom
       };
       const string = JSON.stringify(action);
-      console.log(string);
 
       stream.send(string);
       res.send(updatedRoom);
@@ -67,8 +65,7 @@ function factory(stream) {
             attributes: {
               exclude: ["password", "createdAt", "updatedAt", "roomId"]
             }
-          },
-          game
+          }
         ]
       });
       const action = {
@@ -76,7 +73,6 @@ function factory(stream) {
         payload: updatedRoom
       };
       const string = JSON.stringify(action);
-      console.log(string);
       stream.send(string);
       res.send(string);
     } catch (error) {
