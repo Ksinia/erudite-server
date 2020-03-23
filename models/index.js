@@ -4,6 +4,9 @@ const fs = require("fs");
 const path = require("path");
 const Sequelize = require("sequelize");
 const Umzug = require("umzug");
+// workaround for https://github.com/sequelize/sequelize/issues/3781
+const pg = require("pg");
+delete pg.native;
 
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || "development";

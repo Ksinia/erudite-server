@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
+const sequelize = require("sequelize");
 
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
@@ -36,7 +37,7 @@ app.get("/", (req, res) => {
 
 app.get("/stream", async (req, res, next) => {
   try {
-    const rooms = await room.findAll({
+    let rooms = await room.findAll({
       include: [
         {
           model: user,
@@ -45,9 +46,26 @@ app.get("/stream", async (req, res, next) => {
           }
         },
         {
-          model: game
+          model: game,
+          required: false,
+          attributes: {
+            exclude: ["letters", "board", "previousBoard", "putLetters"]
+          },
+          where: {
+            phase: {
+              [sequelize.Op.not]: "finished"
+            }
+          }
         }
       ]
+    });
+
+    rooms.forEach(room => {
+      if (room.dataValues.games.length > 1) {
+        console.log(`Room ${room.id} has more than 1 unfinished games`);
+      }
+      room.dataValues.game = room.dataValues.games[0];
+      delete room.dataValues.games;
     });
     const action = {
       type: "ALL_ROOMS",

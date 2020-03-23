@@ -1,3 +1,5 @@
+const sequelize = require("sequelize");
+
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
 const { room, user, game } = require("../models");
@@ -221,46 +223,61 @@ function factory(stream) {
               exclude: ["password", "createdAt", "updatedAt"]
             }
           },
-          game
+          {
+            model: game,
+            required: false,
+            attributes: {
+              exclude: ["letters", "board", "previousBoard", "putLetters"]
+            },
+            where: {
+              phase: {
+                [sequelize.Op.not]: "finished"
+              }
+            }
+          }
         ]
       });
+      // create new game only if there is no unfinished game in this room
+      if (currentRoom.games.length === 0) {
+        const turnOrder = shuffle(currentRoom.users.map(user => user.id));
 
-      const turnOrder = shuffle(currentRoom.users.map(user => user.id));
+        // give letters to players
+        const lettersForGame = shuffle(originalLetters);
+        let acc = { pot: lettersForGame.slice() };
+        const letters = currentRoom.users.reduce((acc, user) => {
+          if (!acc[user.id]) {
+            acc[user.id] = [];
+          }
+          while (acc[user.id].length !== 7) {
+            acc[user.id].push(
+              acc.pot.splice(Math.floor(Math.random() * acc.pot.length), 1)[0]
+            );
+          }
+          return acc;
+        }, acc);
+        const score = currentRoom.users.reduce((acc, user) => {
+          acc[user.id] = 0;
+          return acc;
+        }, {});
+        const currentGame = await game.create({
+          turnOrder,
+          letters,
+          roomId,
+          score
+        });
+        await currentGame.setUsers(currentRoom.users);
+        await currentRoom.update({ phase: "started" });
+        const action = {
+          type: "GAME_UPDATED",
+          payload: { gameId: currentGame.id, currentGame }
+        };
+        const string = JSON.stringify(action);
+        stream.send(string);
+        // this response is important
+        res.send(currentGame);
+      }
 
-      // give letters to players
-      const lettersForGame = shuffle(originalLetters);
-      let acc = { pot: lettersForGame.slice() };
-      const letters = currentRoom.users.reduce((acc, user) => {
-        if (!acc[user.id]) {
-          acc[user.id] = [];
-        }
-        while (acc[user.id].length !== 7) {
-          acc[user.id].push(
-            acc.pot.splice(Math.floor(Math.random() * acc.pot.length), 1)[0]
-          );
-        }
-        return acc;
-      }, acc);
-      const score = currentRoom.users.reduce((acc, user) => {
-        acc[user.id] = 0;
-        return acc;
-      }, {});
-      const currentGame = await game.create({
-        turnOrder,
-        letters,
-        roomId,
-        score
-      });
-      await currentGame.setUsers(currentRoom.users);
-      await currentRoom.update({ phase: "started" });
-      const action = {
-        type: "GAME_UPDATED",
-        payload: { gameId: currentGame.id, currentGame }
-      };
-      const string = JSON.stringify(action);
-      stream.send(string);
-      res.send(currentGame);
-      const updatedRoom = await room.findByPk(currentRoom.id, {
+      const updatedRoom = await room.findByPk(roomId, {
         include: [
           {
             model: user,
@@ -269,9 +286,23 @@ function factory(stream) {
               exclude: ["password", "createdAt", "updatedAt"]
             }
           },
-          game
+          {
+            model: game,
+            required: false,
+            attributes: {
+              exclude: ["letters", "board", "previousBoard", "putLetters"]
+            },
+            where: {
+              phase: {
+                [sequelize.Op.not]: "finished"
+              }
+            }
+          }
         ]
       });
+
+      updatedRoom.dataValues.game = updatedRoom.dataValues.games[0];
+      delete updatedRoom.dataValues.games;
       const action2 = {
         type: "UPDATED_ROOM",
         payload: updatedRoom
