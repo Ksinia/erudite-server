@@ -356,6 +356,7 @@ function factory(stream) {
         currentGame.phase === "turn" &&
         currentGame.turnOrder[currentGame.turn] === currentUser.id
       ) {
+        //check if user passed
         if (!userBoard.some(row => row.some(letter => letter))) {
           // copy game board to previous board
           // change game phase to next turn, no need to validate pass
@@ -392,7 +393,8 @@ function factory(stream) {
               previousBoard: currentGame.board,
               phase: "turn",
               turn: getNextTurn(currentGame),
-              passedCount: newPassedQty
+              passedCount: newPassedQty,
+              validated: "unknown"
             });
           }
         } else {
