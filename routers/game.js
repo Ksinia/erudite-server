@@ -1,78 +1,7 @@
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
 const { room, user, game } = require("../models");
-
-const lettersQuantity = [
-  "*-3",
-  "а-10",
-  "б-3",
-  "в-5",
-  "г-3",
-  "д-5",
-  "е-9",
-  "ж-2",
-  "з-2",
-  "и-8",
-  "й-4",
-  "к-6",
-  "л-4",
-  "м-5",
-  "н-8",
-  "о-10",
-  "п-6",
-  "р-6",
-  "с-6",
-  "т-5",
-  "у-3",
-  "ф-1",
-  "х-2",
-  "ц-1",
-  "ч-2",
-  "ш-1",
-  "щ-1",
-  "ъ-1",
-  "ы-2",
-  "ь-2",
-  "э-1",
-  "ю-1",
-  "я-3"
-];
-
-const values = {
-  "*": 0,
-  а: 1,
-  б: 3,
-  в: 2,
-  г: 3,
-  д: 2,
-  е: 1,
-  ж: 5,
-  з: 5,
-  и: 1,
-  й: 2,
-  к: 2,
-  л: 2,
-  м: 2,
-  н: 1,
-  о: 1,
-  п: 2,
-  р: 2,
-  с: 2,
-  т: 2,
-  у: 3,
-  ф: 10,
-  х: 5,
-  ц: 10,
-  ч: 5,
-  ш: 10,
-  щ: 10,
-  ъ: 10,
-  ы: 5,
-  ь: 5,
-  э: 10,
-  ю: 10,
-  я: 3
-};
+const { originalLetters, values } = require("../russianLetters");
 
 const wordBonuses = {
   0: { 0: 3, 7: 3, 14: 3 },
@@ -99,18 +28,9 @@ const letterBonuses = {
   14: { 3: 2, 11: 2 }
 };
 
-function createLetterArray(qty) {
-  const qtyArray = qty.split("-");
-  return Array(parseInt(qtyArray[1])).fill(qtyArray[0]);
-}
-
 function shuffle(arr) {
   return arr.sort(() => Math.random() - 0.5);
 }
-
-const originalLetters = lettersQuantity.reduce((acc, char, index) => {
-  return acc.concat(createLetterArray(char));
-}, []);
 
 function getNextTurn(game) {
   return (game.turn + 1) % game.turnOrder.length;
@@ -210,8 +130,6 @@ function score(game) {
   const rotatedBoard = rotate(game.board);
   const rotatedPreviousBoard = rotate(game.previousBoard);
   const verticalWords = getHorizontalWords(rotatedBoard, rotatedPreviousBoard);
-  // console.log("horizontal words", horizontalWords);
-  // console.log("vertical words", verticalWords);
 
   const horizontalScore = horizontalWords.reduce((score, word) => {
     let wordMultiplier = 0;
@@ -300,7 +218,7 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           },
           game
@@ -348,7 +266,7 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           },
           game
@@ -374,7 +292,7 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           }
         ]
@@ -399,140 +317,138 @@ function factory(stream) {
     const gameId = req.params.id;
     const userBoard = req.body.userBoard;
     try {
-      // check if game is in turn phase
       const currentGame = await game.findByPk(gameId, {
         include: room
       });
-      if (currentGame.phase !== "turn") {
-        return next(`Wrong game phase: ${currentGame.phase}`);
-      }
-      // check if this is user's turn
-      if (currentGame.turnOrder[currentGame.turn] !== currentUser.id) {
-        return next(`It is not turn of user ${currentUser.id}`);
-      }
-      // check if user passed
-      if (!userBoard.some(row => row.some(letter => letter))) {
-        // copy game board to previous board
-        // change game phase to next turn, no need to validate pass
-        // change passedCount qty
-        const newPassedQty = currentGame.passedCount + 1;
-        if (newPassedQty === currentGame.turnOrder.length * 2) {
-          await currentGame.update({
-            phase: "finished",
-            passedCount: newPassedQty
-          });
-          await currentGame.room.update({
-            phase: "ready"
-          });
-          const updatedRoom = await room.findByPk(currentGame.roomId, {
-            include: [
-              {
-                model: user,
-                as: "users",
-                attributes: {
-                  exclude: ["password", "createdAt", "updatedAt", "roomId"]
-                }
-              },
-              game
-            ]
-          });
-          const action2 = {
-            type: "UPDATED_ROOM",
-            payload: updatedRoom
-          };
-          const string2 = JSON.stringify(action2);
-          stream.send(string2);
+      // check if game is in turn phase and if it is current user's turn
+      if (
+        currentGame.phase === "turn" &&
+        currentGame.turnOrder[currentGame.turn] === currentUser.id
+      ) {
+        if (!userBoard.some(row => row.some(letter => letter))) {
+          // copy game board to previous board
+          // change game phase to next turn, no need to validate pass
+          // change passedCount qty
+          const newPassedQty = currentGame.passedCount + 1;
+          if (newPassedQty === currentGame.turnOrder.length * 2) {
+            await currentGame.update({
+              phase: "finished",
+              passedCount: newPassedQty
+            });
+            await currentGame.room.update({
+              phase: "ready"
+            });
+            const updatedRoom = await room.findByPk(currentGame.roomId, {
+              include: [
+                {
+                  model: user,
+                  as: "users",
+                  attributes: {
+                    exclude: ["password", "createdAt", "updatedAt"]
+                  }
+                },
+                game
+              ]
+            });
+            const action2 = {
+              type: "UPDATED_ROOM",
+              payload: updatedRoom
+            };
+            const string2 = JSON.stringify(action2);
+            stream.send(string2);
+          } else {
+            await currentGame.update({
+              previousBoard: currentGame.board,
+              phase: "turn",
+              turn: getNextTurn(currentGame),
+              passedCount: newPassedQty
+            });
+          }
         } else {
-          await currentGame.update({
-            previousBoard: currentGame.board,
-            phase: "turn",
-            turn: getNextTurn(currentGame),
-            passedCount: newPassedQty
-          });
-        }
-      } else {
-        // check if all letters in turn were i user's hand
-        if (
-          userBoard.some(row =>
-            row.some(
-              letter =>
-                letter !== null &&
-                !currentGame.letters[currentUser.id].includes(letter)
+          // check if all letters in turn were i user's hand
+          if (
+            userBoard.some(row =>
+              row.some(
+                letter =>
+                  letter !== null &&
+                  !currentGame.letters[currentUser.id].includes(letter)
+              )
             )
-          )
-        ) {
-          return next(`Invalid letters used`);
-        }
-        // check if all letters are placed on empty cells
-        if (
-          userBoard.some((row, y) =>
-            row.some(
-              (letter, x) => letter !== null && currentGame.board[y][x] !== null
+          ) {
+            return next(`Invalid letters used`);
+          }
+          // check if all letters are placed on empty cells
+          if (
+            userBoard.some((row, y) =>
+              row.some(
+                (letter, x) =>
+                  letter !== null && currentGame.board[y][x] !== null
+              )
             )
-          )
-        ) {
-          return next("Cell is already occupied");
-        }
-        // add user letters to current board
-        const newBoard = currentGame.board.map((row, y) =>
-          row.map((cell, x) => {
-            if (cell === null && userBoard[y][x] !== null) {
-              return userBoard[y][x];
-            } else {
-              return cell;
-            }
-          })
-        );
-
-        // remove those letters from user hand
-        const putLetters = userBoard.reduce((acc, row) => {
-          return acc.concat(
-            row.reduce((accum, cell) => {
-              if (cell) {
-                accum.push(cell);
+          ) {
+            return next("Cell is already occupied");
+          }
+          // add user letters to current board
+          const newBoard = currentGame.board.map((row, y) =>
+            row.map((cell, x) => {
+              if (cell === null && userBoard[y][x] !== null) {
+                return userBoard[y][x];
+              } else {
+                return cell;
               }
-              return accum;
-            }, [])
+            })
           );
-        }, []);
 
-        // extract put letters from all letters
-        putLetters.sort();
-        const temporaryLetters = [
-          ...currentGame.letters[currentUser.id]
-        ].sort();
-        const keepLetters = temporaryLetters.reduce(
-          (acc, letter) => {
-            if (acc.i === putLetters.length) {
+          // remove those letters from user hand
+          const putLetters = userBoard.reduce((acc, row) => {
+            return acc.concat(
+              row.reduce((accum, cell) => {
+                if (cell) {
+                  accum.push(cell);
+                }
+                return accum;
+              }, [])
+            );
+          }, []);
+
+          // extract put letters from all letters
+          putLetters.sort();
+          const temporaryLetters = [
+            ...currentGame.letters[currentUser.id]
+          ].sort();
+          const keepLetters = temporaryLetters.reduce(
+            (acc, letter) => {
+              if (acc.i === putLetters.length) {
+                acc.letters.push(letter);
+                return acc;
+              }
+              if (letter === putLetters[acc.i]) {
+                acc.i++;
+                return acc;
+              }
               acc.letters.push(letter);
               return acc;
-            }
-            if (letter === putLetters[acc.i]) {
-              acc.i++;
-              return acc;
-            }
-            acc.letters.push(letter);
-            return acc;
-          },
-          { i: 0, letters: [] }
-        ).letters;
+            },
+            { i: 0, letters: [] }
+          ).letters;
 
-        const updatedLetters = {
-          ...currentGame.letters,
-          [currentUser.id]: keepLetters
-        };
-        // copy game board to previous board
-        // change game phase to validation
-        // return passedCount to 0
-        await currentGame.update({
-          previousBoard: currentGame.board,
-          board: newBoard,
-          phase: "validation",
-          letters: updatedLetters,
-          putLetters: putLetters,
-          passedCount: 0,
-          validated: "unknown"
-        });
+          const updatedLetters = {
+            ...currentGame.letters,
+            [currentUser.id]: keepLetters
+          };
+          // copy game board to previous board
+          // change game phase to validation
+          // return passedCount to 0
+          await currentGame.update({
+            previousBoard: currentGame.board,
+            board: newBoard,
+            phase: "validation",
+            letters: updatedLetters,
+            putLetters: putLetters,
+            passedCount: 0,
+            validated: "unknown"
+          });
+        }
       }
 
       // fetch game from db
@@ -542,7 +458,7 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           }
         ]
@@ -564,38 +480,33 @@ function factory(stream) {
     const currentUser = req.user;
     const gameId = req.params.id;
     const validation = req.body.validation;
-    console.log(validation);
 
     try {
       const currentGame = await game.findByPk(gameId);
-      if (currentGame.phase !== "validation") {
-        return next("Wrong game phase");
-      }
-      // only user who's turn is next, can validate the turn
       const newTurn = getNextTurn(currentGame);
+      // check if it is right phase and user to validate
+      // only user who's turn is next, can validate the turn
       if (
-        !currentGame.turnOrder.includes(currentUser.id) ||
-        currentUser.id !== currentGame.turnOrder[newTurn]
+        (currentGame.phase === "validation",
+        currentGame.turnOrder.includes(currentUser.id) &&
+          currentUser.id === currentGame.turnOrder[newTurn])
       ) {
-        return next(`User ${currentUser.id} has no right to approve the turn`);
-      }
-
-      if (validation === "yes") {
-        const updatedGameLetters = updateGameLetters(currentGame);
-        const updatedScore = score(currentGame);
-
-        await currentGame.update({
-          phase: "turn",
-          turn: newTurn,
-          letters: updatedGameLetters,
-          putLetters: [],
-          score: updatedScore,
-          validated: "yes"
-        });
-      } else if (validation === "no") {
-        await currentGame.update({
-          validated: "no"
-        });
+        if (validation === "yes") {
+          const updatedGameLetters = updateGameLetters(currentGame);
+          const updatedScore = score(currentGame);
+          await currentGame.update({
+            phase: "turn",
+            turn: newTurn,
+            letters: updatedGameLetters,
+            putLetters: [],
+            score: updatedScore,
+            validated: "yes"
+          });
+        } else if (validation === "no") {
+          await currentGame.update({
+            validated: "no"
+          });
+        }
       }
       const updatedGame = await game.findByPk(gameId, {
         include: [
@@ -603,7 +514,7 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           }
         ]
@@ -629,34 +540,32 @@ function factory(stream) {
     const gameId = req.params.id;
     try {
       const currentGame = await game.findByPk(gameId);
-      if (currentGame.phase !== "validation") {
-        return next("Wrong game phase");
-      }
       // only user can only undo own turn
       if (
-        !currentGame.turnOrder.includes(currentUser.id) ||
-        currentUser.id !== currentGame.turnOrder[currentGame.turn]
+        currentGame.phase === "validation" &&
+        currentGame.turnOrder.includes(currentUser.id) &&
+        currentUser.id === currentGame.turnOrder[currentGame.turn]
       ) {
-        return next(`User ${currentUser.id} has no right to undo the turn`);
+        await currentGame.update({
+          board: currentGame.previousBoard,
+          phase: "turn",
+          letters: {
+            ...currentGame.letters,
+            [currentUser.id]: currentGame.letters[currentUser.id].concat(
+              currentGame.putLetters
+            )
+          },
+          putLetters: []
+        });
       }
-      await currentGame.update({
-        board: currentGame.previousBoard,
-        phase: "turn",
-        letters: {
-          ...currentGame.letters,
-          [currentUser.id]: currentGame.letters[currentUser.id].concat(
-            currentGame.putLetters
-          )
-        },
-        putLetters: []
-      });
+
       const updatedGame = await game.findByPk(gameId, {
         include: [
           {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           }
         ]
