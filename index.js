@@ -23,7 +23,7 @@ const stream = new Sse();
 const gameStream = new Sse();
 
 const roomRouter = roomRouterFactory(stream);
-const gameRouter = gameRouterFactory(gameStream);
+const gameRouter = gameRouterFactory(gameStream, stream);
 
 app.use(signupRouter);
 app.use(loginRouter);

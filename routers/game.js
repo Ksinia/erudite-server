@@ -208,7 +208,7 @@ function score(game) {
   };
 }
 
-function factory(stream) {
+function factory(stream, roomStream) {
   const router = new Router();
 
   router.post("/start", authMiddleware, async (req, res, nxt) => {
@@ -308,7 +308,7 @@ function factory(stream) {
         payload: updatedRoom
       };
       const string2 = JSON.stringify(action2);
-      stream.send(string2);
+      roomStream.send(string2);
     } catch (error) {
       nxt(error);
     }
