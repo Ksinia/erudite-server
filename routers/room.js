@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { room, user, game } = require("../models");
+const { room, user } = require("../models");
 const authMiddleware = require("../auth/middleware");
 
 function factory(stream) {
@@ -17,7 +17,7 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
+              exclude: ["password", "createdAt", "updatedAt"]
             }
           }
         ]
