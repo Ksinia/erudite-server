@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
-const sequelize = require("sequelize");
+const db = require("./models");
 
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
@@ -47,19 +47,52 @@ app.get("/stream", async (req, res, next) => {
         },
         {
           model: game,
-          required: false,
+          required: true,
           attributes: {
             exclude: ["letters", "board", "previousBoard", "putLetters"]
           },
           where: {
             phase: {
-              [sequelize.Op.not]: "finished"
+              [db.Sequelize.Op.not]: "finished"
             }
           }
         }
       ]
     });
 
+    const emptyRooms = await room.findAll({
+      attributes: {
+        include: [
+          [db.Sequelize.fn("COUNT", db.Sequelize.col("games.id")), "gamesCount"]
+        ]
+      },
+      having: db.sequelize.where(
+        db.sequelize.literal('COUNT("games"."id")'),
+        "=",
+        0
+      ),
+      group: [
+        "room.id",
+        "users.id",
+        "users->room_user.createdAt",
+        "users->room_user.updatedAt",
+        "users->room_user.roomId",
+        "users->room_user.userId"
+      ],
+      include: [
+        {
+          model: user,
+          attributes: {
+            exclude: ["password", "createdAt", "updatedAt"]
+          }
+        },
+        {
+          model: game,
+          required: false,
+          attributes: []
+        }
+      ]
+    });
     rooms.forEach(room => {
       if (room.dataValues.games.length > 1) {
         console.log(`Room ${room.id} has more than 1 unfinished games`);
@@ -69,7 +102,7 @@ app.get("/stream", async (req, res, next) => {
     });
     const action = {
       type: "ALL_ROOMS",
-      payload: rooms
+      payload: rooms.concat(emptyRooms)
     };
     const string = JSON.stringify(action);
     stream.updateInit(string); //will send initial data to all clients
