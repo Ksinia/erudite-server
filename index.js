@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
-const sequelize = require("sequelize");
+const db = require("./models");
 
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
@@ -53,7 +53,7 @@ app.get("/stream", async (req, res, next) => {
           },
           where: {
             phase: {
-              [sequelize.Op.not]: "finished"
+              [db.Sequelize.Op.not]: "finished"
             }
           }
         }
