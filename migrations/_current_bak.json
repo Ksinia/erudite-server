@@ -36,6 +36,13 @@
                     "field": "phase",
                     "seqType": "Sequelize.ENUM('turn', 'validation', 'finished')"
                 },
+                "validated": {
+                    "defaultValue": {
+                        "value": "unknown"
+                    },
+                    "field": "validated",
+                    "seqType": "Sequelize.ENUM('unknown', 'yes', 'no')"
+                },
                 "turnOrder": {
                     "field": "turnOrder",
                     "seqType": "Sequelize.JSON"
@@ -252,5 +259,5 @@
             "indexes": []
         }
     },
-    "revision": 6
+    "revision": 7
 }
