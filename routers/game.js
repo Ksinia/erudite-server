@@ -676,7 +676,7 @@ function factory(stream, roomStream) {
         const updatedPot = shuffle(pot.concat(lettersToChange));
 
         await currentGame.update({
-          board: currentGame.previousBoard,
+          previousBoard: currentGame.board,
           phase: "turn",
           turn: getNextTurn(currentGame),
           letters: {
