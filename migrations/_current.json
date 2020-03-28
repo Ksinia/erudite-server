@@ -89,6 +89,13 @@
                     "field": "putLetters",
                     "seqType": "Sequelize.JSON"
                 },
+                "lettersChanged": {
+                    "defaultValue": {
+                        "value": false
+                    },
+                    "field": "lettersChanged",
+                    "seqType": "Sequelize.BOOLEAN"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -259,5 +266,5 @@
             "indexes": []
         }
     },
-    "revision": 7
+    "revision": 8
 }

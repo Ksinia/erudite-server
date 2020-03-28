@@ -29,7 +29,11 @@ module.exports = (sequelize, DataTypes) => {
         .fill(null)
         .map(row => Array(15).fill(null))
     },
-    putLetters: { type: DataTypes.JSON, defaultValue: [] }
+    putLetters: { type: DataTypes.JSON, defaultValue: [] },
+    lettersChanged: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    }
   });
   Game.associate = function(models) {
     Game.belongsToMany(models.user, {
