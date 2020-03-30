@@ -229,12 +229,9 @@ function substract(arr, subarr) {
   ).letters;
 }
 
-function giveLetters(bag, userLetters) {
-  const tempBag = bag.slice();
-  let requiredQty = 7 - userLetters.length;
-  if (tempBag.length < requiredQty) {
-    requiredQty = tempBag.length;
-  }
+function giveLetters(bag, userLetters, lettersToChange) {
+  const tempBag = shuffle(bag.slice().concat(lettersToChange));
+  const requiredQty = lettersToChange.length;
   let newLetters = [];
   while (newLetters.length !== requiredQty) {
     newLetters.push(
@@ -668,12 +665,11 @@ function factory(stream, roomStream) {
         // give new letters to user
         const updatedBagAndUserLetters = giveLetters(
           currentGame.letters.pot,
-          remainingLetters
+          remainingLetters,
+          lettersToChange
         );
         const updatedUserLetters = updatedBagAndUserLetters.userLetters;
-        const pot = updatedBagAndUserLetters.bag;
-        // put letters to the bag and shuffle
-        const updatedPot = shuffle(pot.concat(lettersToChange));
+        const updatedPot = updatedBagAndUserLetters.bag;
 
         await currentGame.update({
           previousBoard: currentGame.board,
