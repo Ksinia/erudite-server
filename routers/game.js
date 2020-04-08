@@ -132,85 +132,92 @@ function rotate(board) {
     .map((_, index) => board.map(row => row[index]));
 }
 
-function score(game) {
-  const horizontalWords = getHorizontalWords(game.board, game.previousBoard);
-  const rotatedBoard = rotate(game.board);
-  const rotatedPreviousBoard = rotate(game.previousBoard);
-  const verticalWords = getHorizontalWords(rotatedBoard, rotatedPreviousBoard);
+function countWordScore(wordMultiplier, wordObject, previousBoard) {
+  return (
+    wordMultiplier *
+    wordObject.word.reduce((wordScore, letter, index) => {
+      let letterMultiplier = 1;
+      if (
+        letterBonuses[wordObject.y] &&
+        letterBonuses[wordObject.y][wordObject.x + index] &&
+        // check if it is not a letter of previous player
+        !previousBoard[wordObject.y][wordObject.x + index]
+      ) {
+        letterMultiplier = letterBonuses[wordObject.y][wordObject.x + index];
+      }
+      return wordScore + values[letter] * letterMultiplier;
+    }, 0)
+  );
+}
 
-  const horizontalScore = horizontalWords.reduce((score, word) => {
-    let wordMultiplier = 0;
-    for (let i = word.x; i <= word.x + word.len; i++) {
-      if (
-        wordBonuses[word.y] &&
-        wordBonuses[word.y][i] &&
-        // check if it is not a letter of previous player
-        !game.previousBoard[word.y][i]
-      ) {
-        wordMultiplier += wordBonuses[word.y][i];
+function turnWordsAndScore(board, previousBoard, bonus15) {
+  const horizontalWords = getHorizontalWords(board, previousBoard);
+  const rotatedBoard = rotate(board);
+  const rotatedPreviousBoard = rotate(previousBoard);
+  const verticalWords = getHorizontalWords(rotatedBoard, rotatedPreviousBoard);
+  const horizontalTurn = horizontalWords.reduce(
+    (turn, wordObject) => {
+      let wordMultiplier = 0;
+      for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
+        if (
+          wordBonuses[wordObject.y] &&
+          wordBonuses[wordObject.y][i] &&
+          // check if it is not a letter of previous player
+          !previousBoard[wordObject.y][i]
+        ) {
+          wordMultiplier += wordBonuses[wordObject.y][i];
+        }
       }
-    }
-    if (wordMultiplier === 0) {
-      wordMultiplier = 1;
-    }
-    return (
-      score +
-      wordMultiplier *
-        word.word.reduce((wordScore, letter, index) => {
-          let letterMultiplier = 1;
-          if (
-            letterBonuses[word.y] &&
-            letterBonuses[word.y][word.x + index] &&
-            // check if it is not a letter of previous player
-            !game.previousBoard[word.y][word.x + index]
-          ) {
-            letterMultiplier = letterBonuses[word.y][word.x + index];
-          }
-          return wordScore + values[letter] * letterMultiplier;
-        }, 0)
-    );
-  }, 0);
-  const verticalScore = verticalWords.reduce((score, word) => {
-    let wordMultiplier = 0;
-    for (let i = word.x; i <= word.x + word.len; i++) {
-      if (
-        wordBonuses[word.y] &&
-        wordBonuses[word.y][i] &&
-        // check if it is not a letter of previous player
-        !rotate(game.previousBoard)[word.y][i]
-      ) {
-        wordMultiplier += wordBonuses[word.y][i];
+      if (wordMultiplier === 0) {
+        wordMultiplier = 1;
       }
-    }
-    if (wordMultiplier === 0) {
-      wordMultiplier = 1;
-    }
-    return (
-      score +
-      wordMultiplier *
-        word.word.reduce((wordScore, letter, index) => {
-          let letterMultiplier = 1;
-          if (
-            letterBonuses[word.y] &&
-            letterBonuses[word.y][word.x + index] &&
-            // check if it is not a letter of previous player
-            !rotate(game.previousBoard)[word.y][word.x + index]
-          ) {
-            letterMultiplier = letterBonuses[word.y][word.x + index];
-          }
-          return wordScore + values[letter] * letterMultiplier;
-        }, 0)
-    );
-  }, 0);
-  let allScore = horizontalScore + verticalScore;
-  const currentUserId = game.turnOrder[game.turn];
-  if (game.letters[currentUserId].length === 0) {
-    allScore += 15;
+      const wordScore = countWordScore(
+        wordMultiplier,
+        wordObject,
+        previousBoard
+      );
+      turn.score += wordScore;
+      turn.words.push({ [wordObject.word.join("")]: wordScore });
+      return turn;
+    },
+    { words: [], score: 0 }
+  );
+  const verticalTurn = verticalWords.reduce(
+    (turn, wordObject) => {
+      let wordMultiplier = 0;
+      for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
+        if (
+          wordBonuses[wordObject.y] &&
+          wordBonuses[wordObject.y][i] &&
+          // check if it is not a letter of previous player
+          !rotate(previousBoard)[wordObject.y][i]
+        ) {
+          wordMultiplier += wordBonuses[wordObject.y][i];
+        }
+      }
+      if (wordMultiplier === 0) {
+        wordMultiplier = 1;
+      }
+      const wordScore = countWordScore(
+        wordMultiplier,
+        wordObject,
+        rotate(previousBoard)
+      );
+      turn.score += wordScore;
+      turn.words.push({ [wordObject.word.join("")]: wordScore });
+      return turn;
+    },
+    { words: [], score: 0 }
+  );
+  let bonus = 0;
+  if (bonus15) {
+    bonus += 15;
   }
-  return {
-    ...game.score,
-    [currentUserId]: (game.score[currentUserId] += allScore)
+  const turn = {
+    words: horizontalTurn.words.concat(verticalTurn.words),
+    score: horizontalTurn.score + verticalTurn.score + bonus
   };
+  return turn;
 }
 
 // extract letters from all letters
@@ -245,6 +252,85 @@ function giveLetters(bag, userLetters, lettersToChange) {
   }
   const updatedUserLetters = userLetters.concat(newLetters);
   return { bag: tempBag, userLetters: updatedUserLetters };
+}
+
+function getResult(score, turns, userIds) {
+  const winScore = Object.keys(score).reduce(
+    (acc, user) => {
+      if (score[user] > 0 && score[user] > acc[0].score) {
+        acc = [{ score: score[user], user: user }];
+      } else if (score[user] === acc[0].score) {
+        acc.push({ score: score[user], user: user });
+      }
+      return acc;
+    },
+    [{ score: 0 }]
+  );
+  let winner = [];
+  if (winScore[0].score > 0) {
+    winner = winScore.map(el => el.user);
+  }
+  const longestWord = turns.reduce((acc, turn) => {
+    turn.words.forEach(word => {
+      if (
+        acc.length === 0 ||
+        Object.keys(word)[0].length > acc[0].word.length
+      ) {
+        acc = [{ word: Object.keys(word)[0], user: turn.user }];
+      } else if (Object.keys(word)[0].length === acc[0].word.length) {
+        acc.push({ word: [Object.keys(word)[0]], user: turn.user });
+      }
+    });
+    return acc;
+  }, []);
+  const maxScoreWord = turns.reduce((acc, turn) => {
+    turn.words.forEach(word => {
+      if (acc.length === 0 || Object.values(word)[0] > acc[0].value) {
+        acc = [
+          {
+            word: Object.keys(word)[0],
+            value: Object.values(word)[0],
+            user: turn.user
+          }
+        ];
+      } else if (Object.values(word)[0] === acc[0].value) {
+        acc.push({
+          word: [Object.keys(word)[0]],
+          value: Object.values(word)[0],
+          user: turn.user
+        });
+      }
+    });
+    return acc;
+  }, []);
+  const bestTurnByCount = turns.reduce((acc, turn) => {
+    if (acc.length === 0 || turn.words.length > acc[0].qty) {
+      acc = [{ qty: turn.words.length, turn, user: turn.user }];
+    } else if (turn.words.length === acc[0].qty) {
+      acc.push({ qty: turn.words.length, turn, user: turn.user });
+    }
+    return acc;
+  }, []);
+  const bestTurnByValue = turns.reduce((acc, turn) => {
+    if (acc.length === 0 || turn.score > acc[0].score) {
+      acc = [{ score: turn.score, turn, user: turn.user }];
+    } else if (turn.score === acc[0].score) {
+      acc.push({ score: turn.score, turn, user: turn.user });
+    }
+    return acc;
+  }, []);
+
+  const neverChangedLetters = userIds.filter(
+    user => !turns.some(turn => turn.changedLetters && turn.user === user)
+  );
+  return {
+    winner,
+    longestWord,
+    maxScoreWord,
+    bestTurnByCount,
+    bestTurnByValue,
+    neverChangedLetters
+  };
 }
 
 function factory(stream, roomStream) {
@@ -302,7 +388,9 @@ function factory(stream, roomStream) {
           turnOrder,
           letters,
           roomId,
-          score
+          score,
+          turns: [],
+          result: {}
         });
         await currentGame.setUsers(currentRoom.users);
         await currentRoom.update({ phase: "started" });
@@ -402,10 +490,28 @@ function factory(stream, roomStream) {
           // change passedCount qty
           const newPassedQty = currentGame.passedCount + 1;
           if (newPassedQty === currentGame.turnOrder.length * 2) {
+            let result = currentGame.result;
+            if (currentGame.turns.length !== 0) {
+              result = getResult(
+                currentGame.score,
+                currentGame.turns,
+                currentGame.turnOrder
+              );
+            }
             await currentGame.update({
               phase: "finished",
               passedCount: newPassedQty,
-              lettersChanged: false
+              lettersChanged: false,
+              result,
+              turns: [
+                ...currentGame.turns,
+                {
+                  words: [],
+                  score: 0,
+                  user: currentUser.id,
+                  changedLetters: false
+                }
+              ]
             });
             await currentGame.room.update({
               phase: "ready"
@@ -434,7 +540,16 @@ function factory(stream, roomStream) {
               phase: "turn",
               turn: getNextTurn(currentGame),
               passedCount: newPassedQty,
-              validated: "unknown"
+              validated: "unknown",
+              turns: [
+                ...currentGame.turns,
+                {
+                  words: [],
+                  score: 0,
+                  user: currentUser.id,
+                  changedLetters: false
+                }
+              ]
             });
           }
         } else {
@@ -552,15 +667,35 @@ function factory(stream, roomStream) {
           currentUser.id === currentGame.turnOrder[newTurn])
       ) {
         if (validation === "yes") {
+          const currentTurnUserId = currentGame.turnOrder[currentGame.turn];
+          const bonus15 = currentGame.letters[currentTurnUserId].length === 0;
+          const turn = turnWordsAndScore(
+            currentGame.board,
+            currentGame.previousBoard,
+            bonus15
+          );
+          const updatedScore = {
+            ...currentGame.score,
+            [currentTurnUserId]: (currentGame.score[currentTurnUserId] +=
+              turn.score)
+          };
+          let updatedTurns = currentGame.turns;
+          // this condition is required because previously created games don't contain turns object
+          if (currentGame.turns) {
+            updatedTurns = [
+              ...currentGame.turns,
+              { ...turn, user: currentTurnUserId, changedLetters: false }
+            ];
+          }
           const updatedGameLetters = updateGameLetters(currentGame);
-          const updatedScore = score(currentGame);
           await currentGame.update({
             phase: "turn",
             turn: newTurn,
             letters: updatedGameLetters,
             putLetters: [],
             score: updatedScore,
-            validated: "yes"
+            validated: "yes",
+            turns: updatedTurns
           });
         } else if (validation === "no") {
           await currentGame.update({
@@ -666,7 +801,6 @@ function factory(stream, roomStream) {
           previousUserLetters,
           lettersToChange
         );
-        console.log("remaining letters", remainingLetters);
         // give new letters to user
         const updatedBagAndUserLetters = giveLetters(
           currentGame.letters.pot,
@@ -686,7 +820,11 @@ function factory(stream, roomStream) {
             [currentUser.id]: updatedUserLetters
           },
           putLetters: [],
-          lettersChanged: true
+          lettersChanged: true,
+          turns: [
+            ...currentGame.turns,
+            { words: [], score: 0, user: currentUser.id, changedLetters: true }
+          ]
         });
       }
       const updatedGame = await game.findByPk(gameId, {

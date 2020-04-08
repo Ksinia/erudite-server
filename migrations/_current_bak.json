@@ -65,6 +65,10 @@
                     "field": "score",
                     "seqType": "Sequelize.JSON"
                 },
+                "turns": {
+                    "field": "turns",
+                    "seqType": "Sequelize.JSON"
+                },
                 "board": {
                     "defaultValue": {
                         "internal": true,
@@ -88,6 +92,13 @@
                     },
                     "field": "putLetters",
                     "seqType": "Sequelize.JSON"
+                },
+                "lettersChanged": {
+                    "defaultValue": {
+                        "value": false
+                    },
+                    "field": "lettersChanged",
+                    "seqType": "Sequelize.BOOLEAN"
                 },
                 "createdAt": {
                     "allowNull": false,
@@ -259,5 +270,5 @@
             "indexes": []
         }
     },
-    "revision": 7
+    "revision": 9
 }
