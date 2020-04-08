@@ -65,6 +65,14 @@
                     "field": "score",
                     "seqType": "Sequelize.JSON"
                 },
+                "turns": {
+                    "field": "turns",
+                    "seqType": "Sequelize.JSON"
+                },
+                "result": {
+                    "field": "result",
+                    "seqType": "Sequelize.JSON"
+                },
                 "board": {
                     "defaultValue": {
                         "internal": true,
@@ -266,5 +274,5 @@
             "indexes": []
         }
     },
-    "revision": 8
+    "revision": 10
 }
