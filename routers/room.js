@@ -17,14 +17,14 @@ function factory(stream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
+          },
+        ],
       });
       const action = {
         type: "NEW_ROOM",
-        payload: updatedRoom
+        payload: updatedRoom,
       };
       const string = JSON.stringify(action);
 
@@ -37,40 +37,40 @@ function factory(stream) {
 
   router.put("/join", authMiddleware, async (req, res, next) => {
     const currentUser = req.user;
-    const newRoomId = req.body.newRoomId;
+    const roomId = req.body.roomId;
     try {
-      const currentRoom = await room.findByPk(newRoomId, {
+      const currentRoom = await room.findByPk(roomId, {
         include: [
           {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt", "roomId"],
+            },
+          },
+        ],
       });
       const updatedUsers = currentRoom.users.concat([currentUser]);
       if (updatedUsers.length === currentRoom.maxPlayers) {
         await currentRoom.update({
-          phase: "ready"
+          phase: "ready",
         });
       }
       await currentRoom.setUsers(updatedUsers);
-      const updatedRoom = await room.findByPk(newRoomId, {
+      const updatedRoom = await room.findByPk(roomId, {
         include: [
           {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt", "roomId"],
+            },
+          },
+        ],
       });
       const action = {
         type: "UPDATED_ROOM",
-        payload: updatedRoom
+        payload: updatedRoom,
       };
       const string = JSON.stringify(action);
       stream.send(string);
