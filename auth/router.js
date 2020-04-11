@@ -13,24 +13,6 @@ async function login(res, next, name = null, password = null) {
     try {
       const currentUser = await user.findOne({
         where: { name: name }
-        // group: ["currentUser.id", "Melodies.id"],
-        // include: {
-        //   model: Melody,
-        //   attributes: {
-        //     include: [
-        //       [
-        //         Sequelize.fn("COUNT", Sequelize.col("Melodies.Dictations.id")),
-        //         "dictationsCount"
-        //       ]
-        //     ]
-        //   },
-        //   include: [
-        //     {
-        //       model: Dictation,
-        //       attributes: []
-        //     }
-        //   ]
-        // }
       });
       if (!currentUser) {
         res.status(400).send({
@@ -47,7 +29,6 @@ async function login(res, next, name = null, password = null) {
             id: currentUser.id,
             name: currentUser.name,
             jwt: jwt
-            // melodies: currentUser.Melodies
           }
         };
         const string = JSON.stringify(action);
@@ -75,53 +56,18 @@ router.get(
   "/profile", //is it ok to have this url without user id?
   authMiddleware,
   async (req, res, next) => {
-    const userId = req.user.id;
+    const currentUser = req.user;
     const jwt = req.headers.authorization.split(" ")[1];
-    try {
-      // I need to get user again, because I need to include all the user's information
-      const currentUser = await user.findByPk(
-        userId
-        //   , {
-        //   group: ["currentUser.id", "Melodies.id"],
-        //   include: {
-        //     model: Melody,
-        //     attributes: {
-        //       include: [
-        //         [
-        //           Sequelize.fn("COUNT", Sequelize.col("Melodies.Dictations.id")),
-        //           "dictationsCount"
-        //         ]
-        //       ]
-        //     },
-        //     include: [
-        //       {
-        //         model: Dictation,
-        //         attributes: []
-        //       }
-        //     ]
-        //   }
-        // }
-      );
-      if (!currentUser) {
-        res.status(400).send({
-          message: "Invalid token"
-        });
-      } else {
-        const action = {
-          type: "LOGIN_SUCCESS",
-          payload: {
-            id: currentUser.id,
-            name: currentUser.name,
-            jwt: jwt
-            // melodies: currentUser.Melodies
-          }
-        };
-        const string = JSON.stringify(action);
-        res.send(string);
+    const action = {
+      type: "LOGIN_SUCCESS",
+      payload: {
+        id: currentUser.id,
+        name: currentUser.name,
+        jwt: jwt
       }
-    } catch (error) {
-      next(error);
-    }
+    };
+    const string = JSON.stringify(action);
+    res.send(string);
   }
 );
 
