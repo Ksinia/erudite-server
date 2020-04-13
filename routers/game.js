@@ -3,7 +3,7 @@ const sequelize = require("sequelize");
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
 const { room, user, game } = require("../models");
-const { originalLetters, values } = require("../russianLetters");
+const lettersSets = require("../letterSets");
 
 const wordBonuses = {
   0: { 0: 3, 7: 3, 14: 3 },
@@ -132,7 +132,7 @@ function rotate(board) {
     .map((_, index) => board.map((row) => row[index]));
 }
 
-function countWordScore(wordMultiplier, wordObject, previousBoard) {
+function countWordScore(wordMultiplier, wordObject, previousBoard, values) {
   return (
     wordMultiplier *
     wordObject.word.reduce((wordScore, letter, index) => {
@@ -150,7 +150,7 @@ function countWordScore(wordMultiplier, wordObject, previousBoard) {
   );
 }
 
-function turnWordsAndScore(board, previousBoard, bonus15) {
+function turnWordsAndScore(board, previousBoard, bonus15, values) {
   const horizontalWords = getHorizontalWords(board, previousBoard);
   const rotatedBoard = rotate(board);
   const rotatedPreviousBoard = rotate(previousBoard);
@@ -174,7 +174,8 @@ function turnWordsAndScore(board, previousBoard, bonus15) {
       const wordScore = countWordScore(
         wordMultiplier,
         wordObject,
-        previousBoard
+        previousBoard,
+        values
       );
       turn.score += wordScore;
       turn.words.push({ [wordObject.word.join("")]: wordScore });
@@ -201,7 +202,8 @@ function turnWordsAndScore(board, previousBoard, bonus15) {
       const wordScore = countWordScore(
         wordMultiplier,
         wordObject,
-        rotate(previousBoard)
+        rotate(previousBoard),
+        values
       );
       turn.score += wordScore;
       turn.words.push({ [wordObject.word.join("")]: wordScore });
@@ -365,9 +367,9 @@ function factory(stream, roomStream) {
       // create new game only if there is no unfinished game in this room
       if (currentRoom.games.length === 0) {
         const turnOrder = shuffle(currentRoom.users.map((user) => user.id));
-
+        const set = lettersSets[currentRoom.language].letters;
         // give letters to players
-        const lettersForGame = shuffle(originalLetters);
+        const lettersForGame = shuffle(set);
         let acc = { pot: lettersForGame.slice() };
         const letters = currentRoom.users.reduce((acc, user) => {
           if (!acc[user.id]) {
@@ -391,6 +393,7 @@ function factory(stream, roomStream) {
           score,
           turns: [],
           result: {},
+          language: currentRoom.language,
         });
         await currentGame.setUsers(currentRoom.users);
         await currentRoom.update({ phase: "started" });
@@ -669,10 +672,12 @@ function factory(stream, roomStream) {
         if (validation === "yes") {
           const currentTurnUserId = currentGame.turnOrder[currentGame.turn];
           const bonus15 = currentGame.letters[currentTurnUserId].length === 0;
+          const values = lettersSets[currentGame.language].values;
           const turn = turnWordsAndScore(
             currentGame.board,
             currentGame.previousBoard,
-            bonus15
+            bonus15,
+            values
           );
           const updatedScore = {
             ...currentGame.score,
