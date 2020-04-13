@@ -2,21 +2,21 @@
 module.exports = (sequelize, DataTypes) => {
   const Room = sequelize.define("room", {
     maxPlayers: {
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     phase: {
       type: DataTypes.ENUM("waiting", "ready", "started", "finished"),
-      defaultValue: "waiting"
-    }
+      defaultValue: "waiting",
+    },
   });
-  Room.associate = function(models) {
+  Room.associate = function (models) {
     Room.belongsToMany(models.user, {
-      through: "room_user"
+      through: "room_user",
     }),
       Room.hasMany(models.game, {
         foreignKey: {
-          name: "roomId"
-        }
+          name: "roomId",
+        },
       });
   };
   return Room;

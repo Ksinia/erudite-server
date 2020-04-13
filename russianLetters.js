@@ -31,7 +31,7 @@ const lettersQuantity = [
   "ь-2",
   "э-1",
   "ю-1",
-  "я-3"
+  "я-3",
 ];
 
 const values = {
@@ -67,7 +67,7 @@ const values = {
   ь: 5,
   э: 10,
   ю: 10,
-  я: 3
+  я: 3,
 };
 
 function createLetterArray(qty) {

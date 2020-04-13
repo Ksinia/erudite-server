@@ -7,16 +7,16 @@ const authMiddleware = require("../auth/middleware");
 async function login(res, next, name = null, password = null) {
   if (!name || !password) {
     res.status(400).send({
-      message: "Please supply a valid name and password"
+      message: "Please supply a valid name and password",
     });
   } else {
     try {
       const currentUser = await user.findOne({
-        where: { name: name }
+        where: { name: name },
       });
       if (!currentUser) {
         res.status(400).send({
-          message: "User with that name does not exist"
+          message: "User with that name does not exist",
         });
       }
       // 2. use bcrypt.compareSync to check the password against the stored hash
@@ -28,14 +28,14 @@ async function login(res, next, name = null, password = null) {
           payload: {
             id: currentUser.id,
             name: currentUser.name,
-            jwt: jwt
-          }
+            jwt: jwt,
+          },
         };
         const string = JSON.stringify(action);
         res.send(string);
       } else {
         res.status(400).send({
-          message: "Password was incorrect"
+          message: "Password was incorrect",
         });
       }
     } catch (err) {
@@ -63,8 +63,8 @@ router.get(
       payload: {
         id: currentUser.id,
         name: currentUser.name,
-        jwt: jwt
-      }
+        jwt: jwt,
+      },
     };
     const string = JSON.stringify(action);
     res.send(string);

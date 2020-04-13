@@ -1,6 +1,6 @@
 # :nerd_face: Erudit game :nerd_face:
 
-This is the backend of Erudite game application. 
+This is the backend of Erudite game application.
 [Here is the frontend](https://github.com/Ksinia/erudite-client).
 
 ## [Check out the deployed version here!](https://erudit.netlify.app)

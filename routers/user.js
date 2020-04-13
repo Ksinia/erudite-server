@@ -8,14 +8,14 @@ const router = new Router();
 router.post("/signup", async (req, res, next) => {
   if (!req.body.password) {
     res.status(400).send({
-      message: "Password should not be empty"
+      message: "Password should not be empty",
     });
     return;
   }
   let userWithSameName = null;
   try {
     userWithSameName = await user.findOne({
-      where: { name: req.body.name }
+      where: { name: req.body.name },
     });
   } catch (error) {
     next(error);
@@ -25,7 +25,7 @@ router.post("/signup", async (req, res, next) => {
   } else {
     const userData = {
       name: req.body.name,
-      password: bcrypt.hashSync(req.body.password, 10)
+      password: bcrypt.hashSync(req.body.password, 10),
     };
     try {
       const newUser = await user.create(userData);
@@ -35,7 +35,7 @@ router.post("/signup", async (req, res, next) => {
         console.log("Error errors[0] type:", typeof error.errors[0]);
         console.log("errors[0] class name:", error.errors[0].constructor.name);
         res.status(400).send({
-          message: error.errors[0].message
+          message: error.errors[0].message,
         });
       } else {
         next(error);

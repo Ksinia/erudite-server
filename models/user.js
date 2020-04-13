@@ -8,22 +8,22 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         len: {
           args: [1, 99],
-          msg: "Username should not be empty"
-        }
-      }
+          msg: "Username should not be empty",
+        },
+      },
     },
-    password: { type: DataTypes.STRING, allowNull: false }
+    password: { type: DataTypes.STRING, allowNull: false },
   });
-  User.associate = function(models) {
+  User.associate = function (models) {
     User.belongsToMany(models.room, {
       through: {
-        name: "room_user"
-      }
+        name: "room_user",
+      },
     });
   };
-  User.associate = function(models) {
+  User.associate = function (models) {
     User.belongsToMany(models.game, {
-      through: "game_user"
+      through: "game_user",
     });
   };
 

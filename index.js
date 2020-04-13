@@ -42,25 +42,25 @@ app.get("/stream", async (req, res, next) => {
         {
           model: user,
           attributes: {
-            exclude: ["password", "createdAt", "updatedAt", "roomId"]
-          }
+            exclude: ["password", "createdAt", "updatedAt", "roomId"],
+          },
         },
         {
           model: game,
           required: false,
           attributes: {
-            exclude: ["letters", "board", "previousBoard", "putLetters"]
+            exclude: ["letters", "board", "previousBoard", "putLetters"],
           },
           where: {
             phase: {
-              [db.Sequelize.Op.not]: "finished"
-            }
-          }
-        }
-      ]
+              [db.Sequelize.Op.not]: "finished",
+            },
+          },
+        },
+      ],
     });
 
-    rooms.forEach(room => {
+    rooms.forEach((room) => {
       if (room.dataValues.games.length > 1) {
         console.log(`Room ${room.id} has more than 1 unfinished games`);
       }
@@ -69,7 +69,7 @@ app.get("/stream", async (req, res, next) => {
     });
     const action = {
       type: "ALL_ROOMS",
-      payload: rooms
+      payload: rooms,
     };
     const string = JSON.stringify(action);
     stream.updateInit(string); //will send initial data to all clients

@@ -16,7 +16,7 @@ const wordBonuses = {
   11: { 3: 2, 11: 2 },
   12: { 2: 2, 12: 2 },
   13: { 1: 2, 13: 2 },
-  14: { 0: 3, 7: 3, 14: 3 }
+  14: { 0: 3, 7: 3, 14: 3 },
 };
 
 const letterBonuses = {
@@ -32,7 +32,7 @@ const letterBonuses = {
   11: { 0: 2, 7: 2, 14: 2 },
   12: { 6: 2, 8: 2 },
   13: { 5: 3, 9: 3 },
-  14: { 3: 2, 11: 2 }
+  14: { 3: 2, 11: 2 },
 };
 
 function shuffle(arr) {
@@ -62,7 +62,7 @@ function updateGameLetters(game) {
   const updatedUserLetters = currentUserLetters.concat(newLetters);
   const updatedGameLetters = {
     ...game.letters,
-    [currentUserId]: updatedUserLetters
+    [currentUserId]: updatedUserLetters,
   };
   return updatedGameLetters;
 }
@@ -82,7 +82,7 @@ function getHorizontalWords(board, previousBoard) {
           cell !== previousBoard[yIndex][xIndex] &&
           // this cell is not counted in words yet
           !lineWords.find(
-            word =>
+            (word) =>
               word.y == yIndex && word.x <= xIndex && word.x + word.len > xIndex
           )
         ) {
@@ -116,7 +116,7 @@ function getHorizontalWords(board, previousBoard) {
               y: yIndex,
               x: leftIndex,
               len: len,
-              word: board[yIndex].slice(leftIndex, rightIndex)
+              word: board[yIndex].slice(leftIndex, rightIndex),
             });
           }
         }
@@ -129,7 +129,7 @@ function getHorizontalWords(board, previousBoard) {
 function rotate(board) {
   return Array(15)
     .fill(null)
-    .map((_, index) => board.map(row => row[index]));
+    .map((_, index) => board.map((row) => row[index]));
 }
 
 function countWordScore(wordMultiplier, wordObject, previousBoard) {
@@ -215,7 +215,7 @@ function turnWordsAndScore(board, previousBoard, bonus15) {
   }
   const turn = {
     words: horizontalTurn.words.concat(verticalTurn.words),
-    score: horizontalTurn.score + verticalTurn.score + bonus
+    score: horizontalTurn.score + verticalTurn.score + bonus,
   };
   return turn;
 }
@@ -268,10 +268,10 @@ function getResult(score, turns, userIds) {
   );
   let winner = [];
   if (winScore[0].score > 0) {
-    winner = winScore.map(el => el.user);
+    winner = winScore.map((el) => el.user);
   }
   const longestWord = turns.reduce((acc, turn) => {
-    turn.words.forEach(word => {
+    turn.words.forEach((word) => {
       if (
         acc.length === 0 ||
         Object.keys(word)[0].length > acc[0].word.length
@@ -284,20 +284,20 @@ function getResult(score, turns, userIds) {
     return acc;
   }, []);
   const maxScoreWord = turns.reduce((acc, turn) => {
-    turn.words.forEach(word => {
+    turn.words.forEach((word) => {
       if (acc.length === 0 || Object.values(word)[0] > acc[0].value) {
         acc = [
           {
             word: Object.keys(word)[0],
             value: Object.values(word)[0],
-            user: turn.user
-          }
+            user: turn.user,
+          },
         ];
       } else if (Object.values(word)[0] === acc[0].value) {
         acc.push({
           word: [Object.keys(word)[0]],
           value: Object.values(word)[0],
-          user: turn.user
+          user: turn.user,
         });
       }
     });
@@ -321,7 +321,7 @@ function getResult(score, turns, userIds) {
   }, []);
 
   const neverChangedLetters = userIds.filter(
-    user => !turns.some(turn => turn.changedLetters && turn.user === user)
+    (user) => !turns.some((turn) => turn.changedLetters && turn.user === user)
   );
   return {
     winner,
@@ -329,7 +329,7 @@ function getResult(score, turns, userIds) {
     maxScoreWord,
     bestTurnByCount,
     bestTurnByValue,
-    neverChangedLetters
+    neverChangedLetters,
   };
 }
 
@@ -345,26 +345,26 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
           },
           {
             model: game,
             required: false,
             attributes: {
-              exclude: ["letters", "board", "previousBoard", "putLetters"]
+              exclude: ["letters", "board", "previousBoard", "putLetters"],
             },
             where: {
               phase: {
-                [sequelize.Op.not]: "finished"
-              }
-            }
-          }
-        ]
+                [sequelize.Op.not]: "finished",
+              },
+            },
+          },
+        ],
       });
       // create new game only if there is no unfinished game in this room
       if (currentRoom.games.length === 0) {
-        const turnOrder = shuffle(currentRoom.users.map(user => user.id));
+        const turnOrder = shuffle(currentRoom.users.map((user) => user.id));
 
         // give letters to players
         const lettersForGame = shuffle(originalLetters);
@@ -390,13 +390,13 @@ function factory(stream, roomStream) {
           roomId,
           score,
           turns: [],
-          result: {}
+          result: {},
         });
         await currentGame.setUsers(currentRoom.users);
         await currentRoom.update({ phase: "started" });
         const action = {
           type: "GAME_UPDATED",
-          payload: { gameId: currentGame.id, currentGame }
+          payload: { gameId: currentGame.id, currentGame },
         };
         const string = JSON.stringify(action);
         stream.send(string);
@@ -410,29 +410,29 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
           },
           {
             model: game,
             required: false,
             attributes: {
-              exclude: ["letters", "board", "previousBoard", "putLetters"]
+              exclude: ["letters", "board", "previousBoard", "putLetters"],
             },
             where: {
               phase: {
-                [sequelize.Op.not]: "finished"
-              }
-            }
-          }
-        ]
+                [sequelize.Op.not]: "finished",
+              },
+            },
+          },
+        ],
       });
 
       updatedRoom.dataValues.game = updatedRoom.dataValues.games[0];
       delete updatedRoom.dataValues.games;
       const action2 = {
         type: "UPDATED_ROOM",
-        payload: updatedRoom
+        payload: updatedRoom,
       };
       const string2 = JSON.stringify(action2);
       roomStream.send(string2);
@@ -450,14 +450,14 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
+          },
+        ],
       });
       const action = {
         type: "GAME_UPDATED",
-        payload: { gameId: gameId, game: currentGame }
+        payload: { gameId: gameId, game: currentGame },
       };
       const string = JSON.stringify(action);
       stream.updateInit(string);
@@ -476,7 +476,7 @@ function factory(stream, roomStream) {
     const userBoard = req.body.userBoard;
     try {
       const currentGame = await game.findByPk(gameId, {
-        include: room
+        include: room,
       });
       // check if game is in turn phase and if it is current user's turn
       if (
@@ -484,7 +484,7 @@ function factory(stream, roomStream) {
         currentGame.turnOrder[currentGame.turn] === currentUser.id
       ) {
         //check if user passed
-        if (!userBoard.some(row => row.some(letter => letter))) {
+        if (!userBoard.some((row) => row.some((letter) => letter))) {
           // copy game board to previous board
           // change game phase to next turn, no need to validate pass
           // change passedCount qty
@@ -509,12 +509,12 @@ function factory(stream, roomStream) {
                   words: [],
                   score: 0,
                   user: currentUser.id,
-                  changedLetters: false
-                }
-              ]
+                  changedLetters: false,
+                },
+              ],
             });
             await currentGame.room.update({
-              phase: "ready"
+              phase: "ready",
             });
             const updatedRoom = await room.findByPk(currentGame.roomId, {
               include: [
@@ -522,15 +522,15 @@ function factory(stream, roomStream) {
                   model: user,
                   as: "users",
                   attributes: {
-                    exclude: ["password", "createdAt", "updatedAt"]
-                  }
+                    exclude: ["password", "createdAt", "updatedAt"],
+                  },
                 },
-                game
-              ]
+                game,
+              ],
             });
             const action2 = {
               type: "UPDATED_ROOM",
-              payload: updatedRoom
+              payload: updatedRoom,
             };
             const string2 = JSON.stringify(action2);
             stream.send(string2);
@@ -547,9 +547,9 @@ function factory(stream, roomStream) {
                   words: [],
                   score: 0,
                   user: currentUser.id,
-                  changedLetters: false
-                }
-              ]
+                  changedLetters: false,
+                },
+              ],
             });
           }
         } else {
@@ -557,9 +557,9 @@ function factory(stream, roomStream) {
           // TODO: take possible duplicates into account
           // TODO: rewrite, remove returns
           if (
-            userBoard.some(row =>
+            userBoard.some((row) =>
               row.some(
-                letter =>
+                (letter) =>
                   letter !== null &&
                   !currentGame.letters[currentUser.id].includes(letter)
               )
@@ -608,7 +608,7 @@ function factory(stream, roomStream) {
           );
           const updatedLetters = {
             ...currentGame.letters,
-            [currentUser.id]: keepLetters
+            [currentUser.id]: keepLetters,
           };
           // copy game board to previous board
           // change game phase to validation
@@ -621,7 +621,7 @@ function factory(stream, roomStream) {
             putLetters: putLetters,
             passedCount: 0,
             validated: "unknown",
-            lettersChanged: false
+            lettersChanged: false,
           });
         }
       }
@@ -633,14 +633,14 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
+          },
+        ],
       });
       const action = {
         type: "GAME_UPDATED",
-        payload: { gameId: gameId, game: updatedGame }
+        payload: { gameId: gameId, game: updatedGame },
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));
@@ -677,14 +677,14 @@ function factory(stream, roomStream) {
           const updatedScore = {
             ...currentGame.score,
             [currentTurnUserId]: (currentGame.score[currentTurnUserId] +=
-              turn.score)
+              turn.score),
           };
           let updatedTurns = currentGame.turns;
           // this condition is required because previously created games don't contain turns object
           if (currentGame.turns) {
             updatedTurns = [
               ...currentGame.turns,
-              { ...turn, user: currentTurnUserId, changedLetters: false }
+              { ...turn, user: currentTurnUserId, changedLetters: false },
             ];
           }
           const updatedGameLetters = updateGameLetters(currentGame);
@@ -695,11 +695,11 @@ function factory(stream, roomStream) {
             putLetters: [],
             score: updatedScore,
             validated: "yes",
-            turns: updatedTurns
+            turns: updatedTurns,
           });
         } else if (validation === "no") {
           await currentGame.update({
-            validated: "no"
+            validated: "no",
           });
         }
       }
@@ -709,17 +709,17 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
+          },
+        ],
       });
       const action = {
         type: "GAME_UPDATED",
         payload: {
           gameId: gameId,
-          game: updatedGame
-        }
+          game: updatedGame,
+        },
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));
@@ -748,9 +748,9 @@ function factory(stream, roomStream) {
             ...currentGame.letters,
             [currentUser.id]: currentGame.letters[currentUser.id].concat(
               currentGame.putLetters
-            )
+            ),
           },
-          putLetters: []
+          putLetters: [],
         });
       }
 
@@ -760,17 +760,17 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
+          },
+        ],
       });
       const action = {
         type: "GAME_UPDATED",
         payload: {
           gameId: gameId,
-          game: updatedGame
-        }
+          game: updatedGame,
+        },
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));
@@ -817,14 +817,14 @@ function factory(stream, roomStream) {
           letters: {
             ...currentGame.letters,
             pot: updatedPot,
-            [currentUser.id]: updatedUserLetters
+            [currentUser.id]: updatedUserLetters,
           },
           putLetters: [],
           lettersChanged: true,
           turns: [
             ...currentGame.turns,
-            { words: [], score: 0, user: currentUser.id, changedLetters: true }
-          ]
+            { words: [], score: 0, user: currentUser.id, changedLetters: true },
+          ],
         });
       }
       const updatedGame = await game.findByPk(gameId, {
@@ -833,17 +833,17 @@ function factory(stream, roomStream) {
             model: user,
             as: "users",
             attributes: {
-              exclude: ["password", "createdAt", "updatedAt"]
-            }
-          }
-        ]
+              exclude: ["password", "createdAt", "updatedAt"],
+            },
+          },
+        ],
       });
       const action = {
         type: "GAME_UPDATED",
         payload: {
           gameId: gameId,
-          game: updatedGame
-        }
+          game: updatedGame,
+        },
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));

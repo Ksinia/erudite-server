@@ -9,7 +9,7 @@ function auth(req, res, next) {
       const data = toData(auth[1]);
       user
         .findByPk(data.userId)
-        .then(user => {
+        .then((user) => {
           if (!user) return next("User does not exist");
 
           req.user = user;
@@ -18,12 +18,12 @@ function auth(req, res, next) {
         .catch(next);
     } catch (error) {
       res.status(400).send({
-        message: `Error ${error.name}: ${error.message}`
+        message: `Error ${error.name}: ${error.message}`,
       });
     }
   } else {
     res.status(401).send({
-      message: "Please login"
+      message: "Please login",
     });
   }
 }
