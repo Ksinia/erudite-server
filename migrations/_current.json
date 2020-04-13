@@ -25,6 +25,13 @@
                     "field": "id",
                     "seqType": "Sequelize.INTEGER"
                 },
+                "language": {
+                    "defaultValue": {
+                        "value": "ru"
+                    },
+                    "field": "language",
+                    "seqType": "Sequelize.ENUM('ru', 'en')"
+                },
                 "letters": {
                     "field": "letters",
                     "seqType": "Sequelize.JSON"
@@ -150,6 +157,13 @@
                     "field": "phase",
                     "seqType": "Sequelize.ENUM('waiting', 'ready', 'started', 'finished')"
                 },
+                "language": {
+                    "defaultValue": {
+                        "value": "ru"
+                    },
+                    "field": "language",
+                    "seqType": "Sequelize.ENUM('ru', 'en')"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -274,5 +288,5 @@
             "indexes": []
         }
     },
-    "revision": 10
+    "revision": 11
 }

@@ -69,6 +69,10 @@
                     "field": "turns",
                     "seqType": "Sequelize.JSON"
                 },
+                "result": {
+                    "field": "result",
+                    "seqType": "Sequelize.JSON"
+                },
                 "board": {
                     "defaultValue": {
                         "internal": true,
@@ -270,5 +274,5 @@
             "indexes": []
         }
     },
-    "revision": 9
+    "revision": 10
 }

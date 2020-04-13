@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM("waiting", "ready", "started", "finished"),
       defaultValue: "waiting",
     },
+    language: {
+      type: DataTypes.ENUM("ru", "en"),
+      defaultValue: "ru",
+    },
   });
   Room.associate = function (models) {
     Room.belongsToMany(models.user, {

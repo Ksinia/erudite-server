@@ -2,6 +2,10 @@
 
 module.exports = (sequelize, DataTypes) => {
   const Game = sequelize.define("game", {
+    language: {
+      type: DataTypes.ENUM("ru", "en"),
+      defaultValue: "ru",
+    },
     letters: {
       type: DataTypes.JSON,
     },

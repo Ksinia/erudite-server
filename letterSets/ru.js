@@ -74,8 +74,8 @@ function createLetterArray(qty) {
   const qtyArray = qty.split("-");
   return Array(parseInt(qtyArray[1])).fill(qtyArray[0]);
 }
-const originalLetters = lettersQuantity.reduce((acc, char, index) => {
+const letters = lettersQuantity.reduce((acc, char, index) => {
   return acc.concat(createLetterArray(char));
 }, []);
 
-module.exports = { originalLetters, values };
+module.exports = { letters, values };
