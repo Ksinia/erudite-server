@@ -198,6 +198,10 @@
                     "field": "password",
                     "seqType": "Sequelize.STRING"
                 },
+                "link": {
+                    "field": "link",
+                    "seqType": "Sequelize.STRING"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -288,5 +292,5 @@
             "indexes": []
         }
     },
-    "revision": 11
+    "revision": 12
 }

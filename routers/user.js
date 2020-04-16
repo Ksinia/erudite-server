@@ -2,6 +2,8 @@ const { Router } = require("express");
 const { user } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
+const authMiddleware = require("../auth/middleware");
+const { toJWT } = require("../auth/jwt");
 
 const router = new Router();
 
@@ -40,6 +42,54 @@ router.post("/signup", async (req, res, next) => {
       } else {
         next(error);
       }
+    }
+  }
+});
+
+router.post("/change-password", authMiddleware, async (req, res, next) => {
+  const currentUser = req.user;
+  if (!req.body.password) {
+    res.status(400).send({
+      message: "Password should not be empty",
+    });
+    return;
+  } else {
+    const newPassword = bcrypt.hashSync(req.body.password, 10);
+    try {
+      await currentUser.update({ password: newPassword });
+      res.send("Password changed");
+    } catch (error) {
+      next(error);
+    }
+  }
+});
+
+router.post("/generate-link", async (req, res, next) => {
+  if (!req.body.name) {
+    res.status(400).send({
+      message: "Name should not be empty",
+    });
+    return;
+  } else {
+    try {
+      const currentUser = await user.findOne({
+        where: { name: req.body.name },
+      });
+      if (!currentUser) {
+        res.status(400).send({
+          message: "User with that name does not exist",
+        });
+        return;
+      } else {
+        const shortTermJwt = toJWT({ userId: currentUser.id }, true);
+        const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
+        const link = `${baseUrl}/change-password?jwt=${shortTermJwt}`;
+        // TODO: send link by email
+        await currentUser.update({ link });
+        res.send("Link generated");
+      }
+    } catch (error) {
+      next(error);
     }
   }
 });

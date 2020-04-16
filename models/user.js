@@ -13,6 +13,9 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     password: { type: DataTypes.STRING, allowNull: false },
+    link: {
+      type: DataTypes.STRING,
+    },
   });
   User.associate = function (models) {
     User.belongsToMany(models.room, {
