@@ -55,7 +55,7 @@ router.post("/login", (req, res, next) => {
 router.get(
   "/profile", //is it ok to have this url without user id?
   authMiddleware,
-  async (req, res, next) => {
+  async (req, res) => {
     const currentUser = req.user;
     const jwt = req.headers.authorization.split(" ")[1];
     const action = {

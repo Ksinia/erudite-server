@@ -89,7 +89,8 @@ function getHorizontalWords(board, previousBoard) {
           // start to search for the beginning of the word
           // move left while xIndex < 0 or cell is empty
           let leftIndex = xIndex;
-          while (true) {
+          //indefinite loop
+          for (;;) {
             leftIndex--;
             if (
               leftIndex < 0 ||
@@ -101,7 +102,8 @@ function getHorizontalWords(board, previousBoard) {
           }
           // move right till xIndex >= 15 or cell is empty
           let rightIndex = xIndex;
-          while (true) {
+          //indefinite loop
+          for (;;) {
             rightIndex++;
             if (
               rightIndex >= row.length ||
@@ -339,7 +341,7 @@ function factory(stream, roomStream) {
   const router = new Router();
 
   router.post("/start", authMiddleware, async (req, res, nxt) => {
-    roomId = req.body.roomId;
+    const roomId = req.body.roomId;
     try {
       const currentRoom = await room.findByPk(roomId, {
         include: [

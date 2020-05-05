@@ -27,13 +27,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
       defaultValue: Array(15)
         .fill(null)
-        .map((row) => Array(15).fill(null)),
+        .map(() => Array(15).fill(null)),
     },
     previousBoard: {
       type: DataTypes.JSON,
       defaultValue: Array(15)
         .fill(null)
-        .map((row) => Array(15).fill(null)),
+        .map(() => Array(15).fill(null)),
     },
     putLetters: { type: DataTypes.JSON, defaultValue: [] },
     lettersChanged: {
