@@ -561,13 +561,23 @@ function factory(stream, roomStream) {
           // check if all letters in turn were i user's hand
           // TODO: take possible duplicates into account
           // TODO: rewrite, remove returns
+          console.log(currentGame.letters[currentUser.id]);
           if (
             userBoard.some((row) =>
-              row.some(
-                (letter) =>
+              row.some((letter) => {
+                console.log(letter);
+                return (
                   letter !== null &&
-                  !currentGame.letters[currentUser.id].includes(letter)
-              )
+                  ((letter[0] !== "*" &&
+                    !currentGame.letters[currentUser.id].includes(letter)) ||
+                    (letter[0] === "*" &&
+                      (!currentGame.letters[currentUser.id].includes("*") ||
+                        letter.length > 2 ||
+                        !lettersSets[currentGame.language].letters.includes(
+                          letter[1]
+                        ))))
+                );
+              })
             )
           ) {
             return next(`Invalid letters used`);
@@ -599,7 +609,7 @@ function factory(stream, roomStream) {
             return acc.concat(
               row.reduce((accum, cell) => {
                 if (cell) {
-                  accum.push(cell);
+                  accum.push(cell[0]);
                 }
                 return accum;
               }, [])
