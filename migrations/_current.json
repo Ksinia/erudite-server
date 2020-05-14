@@ -104,6 +104,14 @@
                     "field": "putLetters",
                     "seqType": "Sequelize.JSON"
                 },
+                "previousLetters": {
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
+                    "field": "previousLetters",
+                    "seqType": "Sequelize.JSON"
+                },
                 "lettersChanged": {
                     "defaultValue": {
                         "value": false
@@ -292,5 +300,5 @@
             "indexes": []
         }
     },
-    "revision": 12
+    "revision": 13
 }

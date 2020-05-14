@@ -36,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
         .map(() => Array(15).fill(null)),
     },
     putLetters: { type: DataTypes.JSON, defaultValue: [] },
+    previousLetters: { type: DataTypes.JSON, defaultValue: [] },
     lettersChanged: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

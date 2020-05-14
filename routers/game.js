@@ -79,7 +79,8 @@ function getHorizontalWords(board, previousBoard) {
     return boardWords.concat(
       row.reduce((lineWords, cell, xIndex) => {
         if (
-          cell !== previousBoard[yIndex][xIndex] &&
+          cell &&
+          !previousBoard[yIndex][xIndex] &&
           // this cell is not counted in words yet
           !lineWords.find(
             (word) =>
@@ -147,7 +148,7 @@ function countWordScore(wordMultiplier, wordObject, previousBoard, values) {
       ) {
         letterMultiplier = letterBonuses[wordObject.y][wordObject.x + index];
       }
-      return wordScore + values[letter] * letterMultiplier;
+      return wordScore + values[letter[0]] * letterMultiplier;
     }, 0)
   );
 }
@@ -180,7 +181,17 @@ function turnWordsAndScore(board, previousBoard, bonus15, values) {
         values
       );
       turn.score += wordScore;
-      turn.words.push({ [wordObject.word.join("")]: wordScore });
+      turn.words.push({
+        [wordObject.word
+          .map((letter) => {
+            if (letter[0] === "*") {
+              return letter[1];
+            } else {
+              return letter;
+            }
+          })
+          .join("")]: wordScore,
+      });
       return turn;
     },
     { words: [], score: 0 }
@@ -208,7 +219,17 @@ function turnWordsAndScore(board, previousBoard, bonus15, values) {
         values
       );
       turn.score += wordScore;
-      turn.words.push({ [wordObject.word.join("")]: wordScore });
+      turn.words.push({
+        [wordObject.word
+          .map((letter) => {
+            if (letter[0] === "*") {
+              return letter[1];
+            } else {
+              return letter;
+            }
+          })
+          .join("")]: wordScore,
+      });
       return turn;
     },
     { words: [], score: 0 }
@@ -356,7 +377,13 @@ function factory(stream, roomStream) {
             model: game,
             required: false,
             attributes: {
-              exclude: ["letters", "board", "previousBoard", "putLetters"],
+              exclude: [
+                "letters",
+                "board",
+                "previousBoard",
+                "putLetters",
+                "previousLetters",
+              ],
             },
             where: {
               phase: {
@@ -422,7 +449,13 @@ function factory(stream, roomStream) {
             model: game,
             required: false,
             attributes: {
-              exclude: ["letters", "board", "previousBoard", "putLetters"],
+              exclude: [
+                "letters",
+                "board",
+                "previousBoard",
+                "putLetters",
+                "previousLetters",
+              ],
             },
             where: {
               phase: {
@@ -479,6 +512,7 @@ function factory(stream, roomStream) {
     const currentUser = req.user;
     const gameId = req.params.id;
     const userBoard = req.body.userBoard;
+    const wildCardOnBoard = req.body.wildCardOnBoard;
     try {
       const currentGame = await game.findByPk(gameId, {
         include: room,
@@ -558,76 +592,116 @@ function factory(stream, roomStream) {
             });
           }
         } else {
-          // check if all letters in turn were i user's hand
-          // TODO: take possible duplicates into account
-          // TODO: rewrite, remove returns
-          if (
-            userBoard.some((row) =>
-              row.some(
-                (letter) =>
-                  letter !== null &&
-                  !currentGame.letters[currentUser.id].includes(letter)
-              )
-            )
-          ) {
-            return next(`Invalid letters used`);
-          }
-          // check if all letters are placed on empty cells
-          if (
-            userBoard.some((row, y) =>
-              row.some(
-                (letter, x) =>
-                  letter !== null && currentGame.board[y][x] !== null
-              )
-            )
-          ) {
-            return next("Cell is already occupied");
-          }
-          // add user letters to current board
-          const newBoard = currentGame.board.map((row, y) =>
-            row.map((cell, x) => {
-              if (cell === null && userBoard[y][x] !== null) {
-                return userBoard[y][x];
-              } else {
-                return cell;
+          let userLetters = currentGame.letters[currentUser.id].slice();
+          let currentGameBoard = currentGame.board.map((row) => row.slice());
+          const wildCardsInHandQty = userLetters.filter(
+            (letter) => letter === "*"
+          ).length;
+          // check if user has changed wildcard (*) on board
+          let usedWildCardsQty = 0;
+          userBoard.forEach((row) => {
+            row.forEach((cell) => {
+              if (cell && cell[0] === "*") {
+                usedWildCardsQty += 1;
               }
-            })
-          );
-
-          // remove those letters from user hand
-          const putLetters = userBoard.reduce((acc, row) => {
-            return acc.concat(
-              row.reduce((accum, cell) => {
-                if (cell) {
-                  accum.push(cell);
-                }
-                return accum;
-              }, [])
-            );
-          }, []);
-
-          // extract put letters from all letters
-          const keepLetters = substract(
-            currentGame.letters[currentUser.id],
-            putLetters
-          );
-          const updatedLetters = {
-            ...currentGame.letters,
-            [currentUser.id]: keepLetters,
-          };
-          // copy game board to previous board
-          // change game phase to validation
-          // return passedCount to 0
-          await currentGame.update({
-            previousBoard: currentGame.board,
-            board: newBoard,
-            phase: "validation",
-            letters: updatedLetters,
-            putLetters: putLetters,
-            passedCount: 0,
-            validated: "unknown",
-            lettersChanged: false,
+            });
           });
+          const allowedChangedWildCardQty =
+            usedWildCardsQty - wildCardsInHandQty;
+          let leftQty = allowedChangedWildCardQty;
+          let ok = true;
+          Object.keys(wildCardOnBoard).forEach((y) => {
+            Object.keys(wildCardOnBoard[y]).forEach((x) => {
+              const letter = wildCardOnBoard[y][x];
+              if (letter && leftQty > 0) {
+                const index = userLetters.indexOf(letter);
+                if (index === -1 || letter !== currentGameBoard[y][x][1]) {
+                  ok = false;
+                }
+                userLetters.splice(index, 1, "*");
+                currentGameBoard[y][x] = letter;
+                leftQty -= 1;
+              }
+            });
+          });
+          if (ok) {
+            // check if all letters in turn were in user's hand
+            // TODO: take possible duplicates into account
+            // TODO: rewrite, remove returns
+            // if (
+            //   userBoard.some((row) =>
+            //     row.some((letter) => {
+            //       console.log(letter);
+            //       return (
+            //         letter !== null &&
+            //         ((letter[0] !== "*" && !userLetters.includes(letter)) ||
+            //           (letter[0] === "*" &&
+            //             (!userLetters.includes("*") ||
+            //               letter.length > 2 ||
+            //               !lettersSets[currentGame.language].letters.includes(
+            //                 letter[1]
+            //               ))))
+            //       );
+            //     })
+            //   )
+            // ) {
+            //   return next(`Invalid letters used`);
+            // }
+            // check if all letters are placed on empty cells
+            if (
+              userBoard.some((row, y) =>
+                row.some(
+                  (letter, x) =>
+                    letter !== null && currentGame.board[y][x] !== null
+                )
+              )
+            ) {
+              return next("Cell is already occupied");
+            }
+            // add user letters to current board
+            const newBoard = currentGameBoard.map((row, y) =>
+              row.map((cell, x) => {
+                if (cell === null && userBoard[y][x] !== null) {
+                  return userBoard[y][x];
+                } else {
+                  return cell;
+                }
+              })
+            );
+
+            // remove those letters from user hand
+            const putLetters = userBoard.reduce((acc, row) => {
+              return acc.concat(
+                row.reduce((accum, cell) => {
+                  if (cell) {
+                    accum.push(cell[0]);
+                  }
+                  return accum;
+                }, [])
+              );
+            }, []);
+
+            // extract put letters from all letters
+            const keepLetters = substract(userLetters, putLetters);
+            const updatedLetters = {
+              ...currentGame.letters,
+              [currentUser.id]: keepLetters,
+            };
+            // copy game board to previous board
+            // change game phase to validation
+            // return passedCount to 0
+            await currentGame.update({
+              previousBoard: currentGame.board,
+              board: newBoard,
+              phase: "validation",
+              letters: updatedLetters,
+              // putLetters: putLetters,
+              previousLetters: currentGame.letters[currentUser.id],
+              passedCount: 0,
+              validated: "unknown",
+              lettersChanged: false,
+            });
+          }
         }
       }
 
@@ -700,6 +774,7 @@ function factory(stream, roomStream) {
             turn: newTurn,
             letters: updatedGameLetters,
             putLetters: [],
+            previousLetters: [],
             score: updatedScore,
             validated: "yes",
             turns: updatedTurns,
@@ -748,17 +823,31 @@ function factory(stream, roomStream) {
         currentGame.turnOrder.includes(currentUser.id) &&
         currentUser.id === currentGame.turnOrder[currentGame.turn]
       ) {
-        await currentGame.update({
-          board: currentGame.previousBoard,
-          phase: "turn",
-          letters: {
-            ...currentGame.letters,
-            [currentUser.id]: currentGame.letters[currentUser.id].concat(
-              currentGame.putLetters
-            ),
-          },
-          putLetters: [],
-        });
+        if (currentGame.previousLetters.length > 0) {
+          await currentGame.update({
+            board: currentGame.previousBoard,
+            phase: "turn",
+            letters: {
+              ...currentGame.letters,
+              [currentUser.id]: currentGame.previousLetters,
+            },
+            putLetters: [],
+            previousLetters: [],
+          });
+        } else {
+          // TODO: get rid of all operations with putLetters in db
+          await currentGame.update({
+            board: currentGame.previousBoard,
+            phase: "turn",
+            letters: {
+              ...currentGame.letters,
+              [currentUser.id]: currentGame.letters[currentUser.id].concat(
+                currentGame.putLetters
+              ),
+            },
+            putLetters: [],
+          });
+        }
       }
 
       const updatedGame = await game.findByPk(gameId, {
@@ -827,6 +916,7 @@ function factory(stream, roomStream) {
             [currentUser.id]: updatedUserLetters,
           },
           putLetters: [],
+          previousLetters: [],
           lettersChanged: true,
           turns: [
             ...currentGame.turns,
