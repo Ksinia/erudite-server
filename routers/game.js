@@ -823,7 +823,10 @@ function factory(stream, roomStream) {
         currentGame.turnOrder.includes(currentUser.id) &&
         currentUser.id === currentGame.turnOrder[currentGame.turn]
       ) {
-        if (currentGame.previousLetters.length > 0) {
+        if (
+          currentGame.previousLetters &&
+          currentGame.previousLetters.length > 0
+        ) {
           await currentGame.update({
             board: currentGame.previousBoard,
             phase: "turn",
