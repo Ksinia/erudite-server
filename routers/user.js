@@ -99,6 +99,7 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
   const currentUser = req.user;
   try {
     const gameIds = await game.findAll({
+      order: [["updatedAt", "DESC"]],
       where: {
         phase: "finished",
       },
@@ -118,7 +119,7 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
         },
       ],
     });
-    res.send(gameIds.map((obj) => parseInt(obj.id)).sort());
+    res.send(gameIds.map((obj) => obj.id));
   } catch (error) {
     next(error);
   }
