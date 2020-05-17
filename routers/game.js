@@ -592,6 +592,7 @@ function factory(stream, roomStream) {
             });
           }
         } else {
+          // user didn't pass
           let userLetters = currentGame.letters[currentUser.id].slice();
           let currentGameBoard = currentGame.board.map((row) => row.slice());
           const wildCardsInHandQty = userLetters.filter(
@@ -669,42 +670,92 @@ function factory(stream, roomStream) {
               })
             );
 
-            // remove those letters from user hand
-            const putLetters = userBoard.reduce((acc, row) => {
-              return acc.concat(
-                row.reduce((accum, cell) => {
-                  if (cell) {
-                    accum.push(cell[0]);
-                  }
-                  return accum;
-                }, [])
-              );
-            }, []);
+            // check if there is any duplicated word
+            //if no, proceed with updating game and sending it in stream
+            // if yes, don't update the game, send action with error as a response only
+            const hWords = getHorizontalWords(newBoard, currentGame.board).map(
+              (wordObject) =>
+                wordObject.word
+                  .map((letter) => {
+                    if (letter[0] === "*") {
+                      return letter[1];
+                    } else {
+                      return letter;
+                    }
+                  })
+                  .join("")
+            );
+            const words = hWords.concat(
+              getHorizontalWords(
+                rotate(newBoard),
+                rotate(currentGame.board)
+              ).map((wordObject) =>
+                wordObject.word
+                  .map((letter) => {
+                    if (letter[0] === "*") {
+                      return letter[1];
+                    } else {
+                      return letter;
+                    }
+                  })
+                  .join("")
+              )
+            );
 
-            // extract put letters from all letters
-            const keepLetters = substract(userLetters, putLetters);
-            const updatedLetters = {
-              ...currentGame.letters,
-              [currentUser.id]: keepLetters,
-            };
-            // copy game board to previous board
-            // change game phase to validation
-            // return passedCount to 0
-            await currentGame.update({
-              previousBoard: currentGame.board,
-              board: newBoard,
-              phase: "validation",
-              letters: updatedLetters,
-              // putLetters: putLetters,
-              previousLetters: currentGame.letters[currentUser.id],
-              passedCount: 0,
-              validated: "unknown",
-              lettersChanged: false,
+            const duplicatedWords = words.filter((word) => {
+              return currentGame.turns.some((turn) => {
+                if (turn.words.length > 0) {
+                  const listOfWords = turn.words.map(
+                    (wordObject) => Object.keys(wordObject)[0]
+                  );
+                  return listOfWords.includes(word);
+                }
+              });
             });
+            if (duplicatedWords && duplicatedWords.length > 0) {
+              const action = {
+                type: "DUPLICATED_WORDS",
+                payload: duplicatedWords,
+              };
+              res.send(JSON.stringify(action));
+              return;
+            } else {
+              // remove those letters from user hand
+              const putLetters = userBoard.reduce((acc, row) => {
+                return acc.concat(
+                  row.reduce((accum, cell) => {
+                    if (cell) {
+                      accum.push(cell[0]);
+                    }
+                    return accum;
+                  }, [])
+                );
+              }, []);
+
+              // extract put letters from all letters
+              const keepLetters = substract(userLetters, putLetters);
+              const updatedLetters = {
+                ...currentGame.letters,
+                [currentUser.id]: keepLetters,
+              };
+              // copy game board to previous board
+              // change game phase to validation
+              // return passedCount to 0
+              await currentGame.update({
+                previousBoard: currentGame.board,
+                board: newBoard,
+                phase: "validation",
+                letters: updatedLetters,
+                // putLetters: putLetters,
+                previousLetters: currentGame.letters[currentUser.id],
+                passedCount: 0,
+                validated: "unknown",
+                lettersChanged: false,
+              });
+            }
           }
         }
       }
-
       // fetch game from db
       const updatedGame = await game.findByPk(gameId, {
         include: [
@@ -717,13 +768,15 @@ function factory(stream, roomStream) {
           },
         ],
       });
-      const action = {
+      const streamAction = {
         type: "GAME_UPDATED",
         payload: { gameId: gameId, game: updatedGame },
       };
-      const string = JSON.stringify(action);
-      res.send(JSON.stringify(updatedGame.id));
-      stream.send(string);
+      const responseAction = {
+        type: "NO_DUPLICATIONS",
+      };
+      res.send(JSON.stringify(responseAction));
+      stream.send(JSON.stringify(streamAction));
     } catch (error) {
       next(error);
     }
