@@ -118,7 +118,7 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
         },
       ],
     });
-    res.send(gameIds.map((obj) => obj.id));
+    res.send(gameIds.map((obj) => obj.id).sort());
   } catch (error) {
     next(error);
   }
