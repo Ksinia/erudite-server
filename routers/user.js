@@ -1,9 +1,10 @@
 const { Router } = require("express");
-const { user } = require("../models");
+const { user, game } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");
 const { toJWT } = require("../auth/jwt");
+const db = require("../models");
 
 const router = new Router();
 
@@ -83,7 +84,7 @@ router.post("/generate-link", async (req, res, next) => {
       } else {
         const shortTermJwt = toJWT({ userId: currentUser.id }, true);
         const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
-        const link = `${baseUrl}/change-password?jwt=${shortTermJwt}`;
+        const link = `${baseUrl}/user?jwt=${shortTermJwt}`;
         // TODO: send link by email
         await currentUser.update({ link });
         res.send("Link generated");
@@ -91,6 +92,35 @@ router.post("/generate-link", async (req, res, next) => {
     } catch (error) {
       next(error);
     }
+  }
+});
+
+router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
+  const currentUser = req.user;
+  try {
+    const gameIds = await game.findAll({
+      where: {
+        phase: "finished",
+      },
+      attributes: ["id"],
+      raw: true,
+      include: [
+        {
+          model: user,
+          attributes: ["id"],
+          raw: true,
+
+          where: {
+            id: {
+              [db.Sequelize.Op.eq]: currentUser.id,
+            },
+          },
+        },
+      ],
+    });
+    res.send(gameIds.map((obj) => obj.id));
+  } catch (error) {
+    next(error);
   }
 });
 
