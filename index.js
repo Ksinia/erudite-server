@@ -19,11 +19,11 @@ const corsMiddleware = cors();
 app.use(corsMiddleware);
 app.use(bodyParserMiddleware);
 
-const stream = new Sse();
+const roomStream = new Sse();
 const gameStream = new Sse();
 
-const roomRouter = roomRouterFactory(stream);
-const gameRouter = gameRouterFactory(gameStream, stream);
+const roomRouter = roomRouterFactory(roomStream);
+const gameRouter = gameRouterFactory(gameStream, roomStream);
 
 app.use(signupRouter);
 app.use(loginRouter);
@@ -31,7 +31,7 @@ app.use(roomRouter);
 app.use(gameRouter);
 
 app.get("/", (req, res) => {
-  stream.send("test");
+  roomStream.send("test");
   res.send("Hello"); //we need res.send to avoid timed out error
 });
 
@@ -72,8 +72,8 @@ app.get("/stream", async (req, res, next) => {
       payload: rooms,
     };
     const string = JSON.stringify(action);
-    stream.updateInit(string); //will send initial data to all clients
-    stream.init(req, res);
+    roomStream.updateInit(string); //will send initial data to all clients
+    roomStream.init(req, res);
   } catch (error) {
     next(error);
   }

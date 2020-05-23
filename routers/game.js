@@ -358,7 +358,7 @@ function getResult(score, turns, userIds) {
   };
 }
 
-function factory(stream, roomStream) {
+function factory(gameStream, roomStream) {
   const router = new Router();
 
   router.post("/start", authMiddleware, async (req, res, nxt) => {
@@ -431,7 +431,7 @@ function factory(stream, roomStream) {
           payload: { gameId: currentGame.id, currentGame },
         };
         const string = JSON.stringify(action);
-        stream.send(string);
+        gameStream.send(string);
         // this response is important
         res.send(currentGame);
       }
@@ -498,9 +498,8 @@ function factory(stream, roomStream) {
         payload: { gameId: gameId, game: currentGame },
       };
       const string = JSON.stringify(action);
-      stream.updateInit(string);
-      stream.init(req, res);
-      stream.send(string);
+      gameStream.init(req, res);
+      gameStream.send(string);
     } catch (error) {
       next(error);
     }
@@ -572,7 +571,7 @@ function factory(stream, roomStream) {
               payload: updatedRoom,
             };
             const string2 = JSON.stringify(action2);
-            stream.send(string2);
+            roomStream.send(string2);
           } else {
             await currentGame.update({
               previousBoard: currentGame.board,
@@ -776,7 +775,7 @@ function factory(stream, roomStream) {
         type: "NO_DUPLICATIONS",
       };
       res.send(JSON.stringify(responseAction));
-      stream.send(JSON.stringify(streamAction));
+      gameStream.send(JSON.stringify(streamAction));
     } catch (error) {
       next(error);
     }
@@ -858,7 +857,7 @@ function factory(stream, roomStream) {
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));
-      stream.send(string);
+      gameStream.send(string);
     } catch (error) {
       next(error);
     }
@@ -926,7 +925,7 @@ function factory(stream, roomStream) {
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));
-      stream.send(string);
+      gameStream.send(string);
     } catch (error) {
       next(error);
     }
@@ -1000,7 +999,7 @@ function factory(stream, roomStream) {
       };
       const string = JSON.stringify(action);
       res.send(JSON.stringify(updatedGame.id));
-      stream.send(string);
+      gameStream.send(string);
     } catch (error) {
       next(error);
     }
