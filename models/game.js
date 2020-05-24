@@ -10,9 +10,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
     },
     phase: {
-      type: DataTypes.ENUM("turn", "validation", "finished"),
+      type: DataTypes.ENUM(
+        "waiting",
+        "ready",
+        "turn",
+        "validation",
+        "finished"
+      ),
       defaultValue: "turn",
     },
+    archived: { type: DataTypes.BOOLEAN, defaultValue: false },
     validated: {
       type: DataTypes.ENUM("unknown", "yes", "no"),
       defaultValue: "unknown",

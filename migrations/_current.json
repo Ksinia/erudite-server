@@ -41,7 +41,14 @@
                         "value": "turn"
                     },
                     "field": "phase",
-                    "seqType": "Sequelize.ENUM('turn', 'validation', 'finished')"
+                    "seqType": "Sequelize.ENUM('waiting', 'ready', 'turn', 'validation', 'finished')"
+                },
+                "archived": {
+                    "defaultValue": {
+                        "value": false
+                    },
+                    "field": "archived",
+                    "seqType": "Sequelize.BOOLEAN"
                 },
                 "validated": {
                     "defaultValue": {
@@ -300,5 +307,5 @@
             "indexes": []
         }
     },
-    "revision": 13
+    "revision": 14
 }

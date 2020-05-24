@@ -100,7 +100,7 @@ var migrationCommands = function(transaction) {
                         "field": "letters"
                     },
                     "phase": {
-                        "type": Sequelize.ENUM('turn', 'validation', 'finished'),
+                        "type": Sequelize.ENUM('waiting', 'ready', 'turn', 'validation', 'finished'),
                         "field": "phase",
                         "defaultValue": "turn"
                     },
