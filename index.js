@@ -41,16 +41,12 @@ app.get("/stream", async (req, res, next) => {
       include: [
         {
           model: user,
-          attributes: {
-            exclude: ["password", "createdAt", "updatedAt", "roomId"],
-          },
+          attributes: ["id", "name"],
         },
         {
           model: game,
           required: false,
-          attributes: {
-            exclude: ["letters", "board", "previousBoard", "putLetters"],
-          },
+          attributes: ["id", "phase", "turnOrder", "turn", "validated"],
           where: {
             phase: {
               [db.Sequelize.Op.not]: "finished",

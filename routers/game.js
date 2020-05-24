@@ -369,22 +369,12 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
           {
             model: game,
             required: false,
-            attributes: {
-              exclude: [
-                "letters",
-                "board",
-                "previousBoard",
-                "putLetters",
-                "previousLetters",
-              ],
-            },
+            attributes: ["id", "phase", "turnOrder", "turn", "validated"],
             where: {
               phase: {
                 [sequelize.Op.not]: "finished",
@@ -441,22 +431,12 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
           {
             model: game,
             required: false,
-            attributes: {
-              exclude: [
-                "letters",
-                "board",
-                "previousBoard",
-                "putLetters",
-                "previousLetters",
-              ],
-            },
+            attributes: ["id", "phase", "turnOrder", "turn", "validated"],
             where: {
               phase: {
                 [sequelize.Op.not]: "finished",
@@ -487,9 +467,7 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
@@ -559,9 +537,7 @@ function factory(gameStream, roomStream) {
                 {
                   model: user,
                   as: "users",
-                  attributes: {
-                    exclude: ["password", "createdAt", "updatedAt"],
-                  },
+                  attributes: ["id", "name"],
                 },
                 game,
               ],
@@ -761,9 +737,7 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
@@ -842,9 +816,7 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
@@ -910,9 +882,7 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
@@ -984,9 +954,7 @@ function factory(gameStream, roomStream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });

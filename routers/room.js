@@ -16,9 +16,7 @@ function factory(stream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
@@ -44,9 +42,7 @@ function factory(stream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
@@ -62,9 +58,7 @@ function factory(stream) {
           {
             model: user,
             as: "users",
-            attributes: {
-              exclude: ["password", "createdAt", "updatedAt", "roomId"],
-            },
+            attributes: ["id", "name"],
           },
         ],
       });
