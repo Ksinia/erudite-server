@@ -6,9 +6,8 @@ const db = require("./models");
 
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
-const roomRouterFactory = require("./routers/room");
 const gameRouterFactory = require("./routers/game");
-const { room, user, game } = require("./models");
+const { user, game } = require("./models");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -19,57 +18,52 @@ const corsMiddleware = cors();
 app.use(corsMiddleware);
 app.use(bodyParserMiddleware);
 
-const roomStream = new Sse();
+const lobbyStream = new Sse();
 const gameStream = new Sse();
 
-const roomRouter = roomRouterFactory(roomStream);
-const gameRouter = gameRouterFactory(gameStream, roomStream);
+const gameRouter = gameRouterFactory(gameStream, lobbyStream);
 
 app.use(signupRouter);
 app.use(loginRouter);
-app.use(roomRouter);
 app.use(gameRouter);
 
-app.get("/", (req, res) => {
-  roomStream.send("test");
+app.get("/", (_, res) => {
+  lobbyStream.send("test");
   res.send("Hello"); //we need res.send to avoid timed out error
 });
 
 app.get("/stream", async (req, res, next) => {
   try {
-    let rooms = await room.findAll({
+    let games = await game.findAll({
+      attributes: [
+        "id",
+        "phase",
+        "turnOrder",
+        "turn",
+        "validated",
+        "language",
+        "maxPlayers",
+      ],
+      where: {
+        phase: {
+          [db.Sequelize.Op.not]: "finished",
+        },
+      },
       include: [
         {
           model: user,
           attributes: ["id", "name"],
         },
-        {
-          model: game,
-          required: false,
-          attributes: ["id", "phase", "turnOrder", "turn", "validated"],
-          where: {
-            phase: {
-              [db.Sequelize.Op.not]: "finished",
-            },
-          },
-        },
       ],
     });
 
-    rooms.forEach((room) => {
-      if (room.dataValues.games.length > 1) {
-        console.log(`Room ${room.id} has more than 1 unfinished games`);
-      }
-      room.dataValues.game = room.dataValues.games[0];
-      delete room.dataValues.games;
-    });
     const action = {
-      type: "ALL_ROOMS",
-      payload: rooms,
+      type: "ALL_GAMES",
+      payload: games,
     };
     const string = JSON.stringify(action);
-    roomStream.updateInit(string); //will send initial data to all clients
-    roomStream.init(req, res);
+    lobbyStream.updateInit(string); //will send initial data to all clients
+    lobbyStream.init(req, res);
   } catch (error) {
     next(error);
   }

@@ -43,6 +43,10 @@
                     "field": "phase",
                     "seqType": "Sequelize.ENUM('waiting', 'ready', 'turn', 'validation', 'finished')"
                 },
+                "maxPlayers": {
+                    "field": "maxPlayers",
+                    "seqType": "Sequelize.INTEGER"
+                },
                 "archived": {
                     "defaultValue": {
                         "value": false
@@ -307,5 +311,5 @@
             "indexes": []
         }
     },
-    "revision": 14
+    "revision": 15
 }

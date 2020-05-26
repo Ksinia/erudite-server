@@ -19,6 +19,9 @@ module.exports = (sequelize, DataTypes) => {
       ),
       defaultValue: "turn",
     },
+    maxPlayers: {
+      type: DataTypes.INTEGER,
+    },
     archived: { type: DataTypes.BOOLEAN, defaultValue: false },
     validated: {
       type: DataTypes.ENUM("unknown", "yes", "no"),
