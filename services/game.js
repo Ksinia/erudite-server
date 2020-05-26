@@ -1,14 +1,14 @@
 const { wordBonuses, letterBonuses } = require("../constants/bonuses");
 
-shuffle = (arr) => {
+const shuffle = (arr) => {
   return arr.sort(() => Math.random() - 0.5);
 };
 
-getNextTurn = (game) => {
+const getNextTurn = (game) => {
   return (game.turn + 1) % game.turnOrder.length;
 };
 
-updateGameLetters = (game) => {
+const updateGameLetters = (game) => {
   const currentUserId = game.turnOrder[game.turn];
   const currentUserLetters = game.letters[currentUserId];
   let requiredQty = 7 - currentUserLetters.length;
@@ -39,7 +39,7 @@ updateGameLetters = (game) => {
 // слово это вектор от ху до ху.
 // слова проверяем только для тех букв, которые не ходятся внутри этих векторов. Но только по
 // горзизонтали. Слова по вертикали ищем только после того,как нашли все слова по горизонтали.
-getHorizontalWords = (board, previousBoard) => {
+const getHorizontalWords = (board, previousBoard) => {
   return board.reduce((boardWords, row, yIndex) => {
     return boardWords.concat(
       row.reduce((lineWords, cell, xIndex) => {
@@ -94,13 +94,13 @@ getHorizontalWords = (board, previousBoard) => {
   }, []);
 };
 
-rotate = (board) => {
+const rotate = (board) => {
   return Array(15)
     .fill(null)
     .map((_, index) => board.map((row) => row[index]));
 };
 
-countWordScore = (wordMultiplier, wordObject, previousBoard, values) => {
+const countWordScore = (wordMultiplier, wordObject, previousBoard, values) => {
   return (
     wordMultiplier *
     wordObject.word.reduce((wordScore, letter, index) => {
@@ -118,7 +118,7 @@ countWordScore = (wordMultiplier, wordObject, previousBoard, values) => {
   );
 };
 
-turnWordsAndScore = (board, previousBoard, bonus15, values) => {
+const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
   const horizontalWords = getHorizontalWords(board, previousBoard);
   const rotatedBoard = rotate(board);
   const rotatedPreviousBoard = rotate(previousBoard);
@@ -211,7 +211,7 @@ turnWordsAndScore = (board, previousBoard, bonus15, values) => {
 };
 
 // extract letters from all letters
-substract = (arr, subarr) => {
+const substract = (arr, subarr) => {
   const tempSubarr = subarr.slice().sort();
   const tempArr = arr.slice().sort();
   return tempArr.reduce(
@@ -231,7 +231,7 @@ substract = (arr, subarr) => {
   ).letters;
 };
 
-giveLetters = (bag, userLetters, lettersToChange) => {
+const giveLetters = (bag, userLetters, lettersToChange) => {
   const tempBag = shuffle(bag.slice().concat(lettersToChange));
   const requiredQty = lettersToChange.length;
   let newLetters = [];
@@ -244,7 +244,7 @@ giveLetters = (bag, userLetters, lettersToChange) => {
   return { bag: tempBag, userLetters: updatedUserLetters };
 };
 
-getResult = (score, turns, userIds) => {
+const getResult = (score, turns, userIds) => {
   const winScore = Object.keys(score).reduce(
     (acc, user) => {
       if (score[user] > 0 && score[user] > acc[0].score) {

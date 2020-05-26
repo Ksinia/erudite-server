@@ -1,4 +1,4 @@
-wordBonuses = {
+const wordBonuses = {
   0: { 0: 3, 7: 3, 14: 3 },
   1: { 1: 2, 13: 2 },
   2: { 2: 2, 12: 2 },
@@ -12,7 +12,7 @@ wordBonuses = {
   14: { 0: 3, 7: 3, 14: 3 },
 };
 
-letterBonuses = {
+const letterBonuses = {
   0: { 3: 2, 11: 2 },
   1: { 5: 3, 9: 3 },
   2: { 6: 2, 8: 2 },

@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": ["migrations/"],
+  "ignorePatterns": ["migrations/", "*.json", "*.md", "LICENSE"],
   "env": {
     "es6": true,
     "node": true
@@ -13,4 +13,3 @@
     "prettier/prettier": "error"
   }
 }
-
