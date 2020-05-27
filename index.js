@@ -2,12 +2,13 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
-const db = require("./models");
 
+const db = require("./models");
+const { user, game } = require("./models");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
-const { user, game } = require("./models");
+const { archivateOldGames } = require("./services/lobby.js");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -48,6 +49,7 @@ app.get("/stream", async (req, res, next) => {
         phase: {
           [db.Sequelize.Op.not]: "finished",
         },
+        archived: false,
       },
       include: [
         {
@@ -70,3 +72,5 @@ app.get("/stream", async (req, res, next) => {
 });
 
 app.listen(port, () => console.log(`Listening on port: ${port}`));
+archivateOldGames();
+setInterval(archivateOldGames, 1000 * 60 * 60 * 24);

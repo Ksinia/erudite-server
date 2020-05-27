@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
-const { room, user, game } = require("../models");
+const { user, game } = require("../models");
 const lettersSets = require("../constants/letterSets");
 const {
   shuffle,
@@ -235,9 +235,7 @@ function factory(gameStream, lobbyStream) {
     const userBoard = req.body.userBoard;
     const wildCardOnBoard = req.body.wildCardOnBoard;
     try {
-      const currentGame = await game.findByPk(gameId, {
-        include: room,
-      });
+      const currentGame = await game.findByPk(gameId);
       // check if game is in turn phase and if it is current user's turn
       if (
         currentGame.phase === "turn" &&
