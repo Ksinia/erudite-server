@@ -52,23 +52,19 @@ router.post("/login", (req, res, next) => {
   login(res, next, name, password);
 });
 
-router.get(
-  "/profile", //is it ok to have this url without user id?
-  authMiddleware,
-  async (req, res) => {
-    const currentUser = req.user;
-    const jwt = req.headers.authorization.split(" ")[1];
-    const action = {
-      type: "LOGIN_SUCCESS",
-      payload: {
-        id: currentUser.id,
-        name: currentUser.name,
-        jwt: jwt,
-      },
-    };
-    const string = JSON.stringify(action);
-    res.send(string);
-  }
-);
+router.get("/profile", authMiddleware, async (req, res) => {
+  const currentUser = req.user;
+  const jwt = req.headers.authorization.split(" ")[1];
+  const action = {
+    type: "LOGIN_SUCCESS",
+    payload: {
+      id: currentUser.id,
+      name: currentUser.name,
+      jwt: jwt,
+    },
+  };
+  const string = JSON.stringify(action);
+  res.send(string);
+});
 
 module.exports = { router, login };
