@@ -51,6 +51,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    wordsForValidation: {
+      type: DataTypes.JSON,
+      defaultValue: [],
+    },
   });
   Game.associate = function (models) {
     Game.belongsToMany(models.user, {

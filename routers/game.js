@@ -454,6 +454,7 @@ function factory(gameStream, lobbyStream) {
                   passedCount: 0,
                   validated: "unknown",
                   lettersChanged: false,
+                  wordsForValidation: words,
                 });
               }
             }
@@ -534,6 +535,7 @@ function factory(gameStream, lobbyStream) {
             score: updatedScore,
             validated: "yes",
             turns: updatedTurns,
+            wordsForValidation: [],
           });
         } else if (validation === "no") {
           await currentGame.update({

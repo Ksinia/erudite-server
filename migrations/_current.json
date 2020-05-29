@@ -130,6 +130,14 @@
                     "field": "lettersChanged",
                     "seqType": "Sequelize.BOOLEAN"
                 },
+                "wordsForValidation": {
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
+                    "field": "wordsForValidation",
+                    "seqType": "Sequelize.JSON"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -311,5 +319,5 @@
             "indexes": []
         }
     },
-    "revision": 15
+    "revision": 16
 }
