@@ -123,81 +123,15 @@ const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
   const rotatedBoard = rotate(board);
   const rotatedPreviousBoard = rotate(previousBoard);
   const verticalWords = getHorizontalWords(rotatedBoard, rotatedPreviousBoard);
-  const horizontalTurn = horizontalWords.reduce(
-    (turn, wordObject) => {
-      let wordMultiplier = 0;
-      for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
-        if (
-          wordBonuses[wordObject.y] &&
-          wordBonuses[wordObject.y][i] &&
-          // check if it is not a letter of previous player
-          !previousBoard[wordObject.y][i]
-        ) {
-          wordMultiplier += wordBonuses[wordObject.y][i];
-        }
-      }
-      if (wordMultiplier === 0) {
-        wordMultiplier = 1;
-      }
-      const wordScore = countWordScore(
-        wordMultiplier,
-        wordObject,
-        previousBoard,
-        values
-      );
-      turn.score += wordScore;
-      turn.words.push({
-        [wordObject.word
-          .map((letter) => {
-            if (letter[0] === "*") {
-              return letter[1];
-            } else {
-              return letter;
-            }
-          })
-          .join("")]: wordScore,
-      });
-      return turn;
-    },
-    { words: [], score: 0 }
+  const horizontalTurn = getHorizontalOrVerticalTurn(
+    horizontalWords,
+    previousBoard,
+    values
   );
-  const verticalTurn = verticalWords.reduce(
-    (turn, wordObject) => {
-      let wordMultiplier = 0;
-      for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
-        if (
-          wordBonuses[wordObject.y] &&
-          wordBonuses[wordObject.y][i] &&
-          // check if it is not a letter of previous player
-          !rotate(previousBoard)[wordObject.y][i]
-        ) {
-          wordMultiplier += wordBonuses[wordObject.y][i];
-        }
-      }
-      if (wordMultiplier === 0) {
-        wordMultiplier = 1;
-      }
-      const wordScore = countWordScore(
-        wordMultiplier,
-        wordObject,
-        rotate(previousBoard),
-        values
-      );
-      turn.score += wordScore;
-      turn.words.push({
-        [wordObject.word
-          .map((letter) => {
-            if (letter[0] === "*") {
-              return letter[1];
-            } else {
-              return letter;
-            }
-          })
-          .join("")]: wordScore,
-      });
-      return turn;
-    },
-    { words: [], score: 0 }
+  const verticalTurn = getHorizontalOrVerticalTurn(
+    verticalWords,
+    rotatedPreviousBoard,
+    values
   );
   let bonus = 0;
   if (bonus15) {
@@ -264,11 +198,18 @@ const getResult = (score, turns, userIds) => {
     turn.words.forEach((word) => {
       if (
         acc.length === 0 ||
-        Object.keys(word)[0].length > acc[0].word.length
+        Object.keys(word)[0].replace(/\*/gi, "").length > acc[0].word.length
       ) {
-        acc = [{ word: Object.keys(word)[0], user: turn.user }];
-      } else if (Object.keys(word)[0].length === acc[0].word.length) {
-        acc.push({ word: [Object.keys(word)[0]], user: turn.user });
+        acc = [
+          { word: Object.keys(word)[0].replace(/\*/gi, ""), user: turn.user },
+        ];
+      } else if (
+        Object.keys(word)[0].replace(/\*/gi, "").length === acc[0].word.length
+      ) {
+        acc.push({
+          word: [Object.keys(word)[0].replace(/\*/gi, "")],
+          user: turn.user,
+        });
       }
     });
     return acc;
@@ -278,14 +219,14 @@ const getResult = (score, turns, userIds) => {
       if (acc.length === 0 || Object.values(word)[0] > acc[0].value) {
         acc = [
           {
-            word: Object.keys(word)[0],
+            word: Object.keys(word)[0].replace(/\*/gi, ""),
             value: Object.values(word)[0],
             user: turn.user,
           },
         ];
       } else if (Object.values(word)[0] === acc[0].value) {
         acc.push({
-          word: [Object.keys(word)[0]],
+          word: [Object.keys(word)[0]].replace(/\*/gi, ""),
           value: Object.values(word)[0],
           user: turn.user,
         });
@@ -321,6 +262,43 @@ const getResult = (score, turns, userIds) => {
     bestTurnByValue,
     neverChangedLetters,
   };
+};
+
+const getHorizontalOrVerticalTurn = (
+  horizontalWords,
+  previousBoard,
+  values
+) => {
+  return horizontalWords.reduce(
+    (turn, wordObject) => {
+      let wordMultiplier = 0;
+      for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
+        if (
+          wordBonuses[wordObject.y] &&
+          wordBonuses[wordObject.y][i] &&
+          // check if it is not a letter of previous player
+          !previousBoard[wordObject.y][i]
+        ) {
+          wordMultiplier += wordBonuses[wordObject.y][i];
+        }
+      }
+      if (wordMultiplier === 0) {
+        wordMultiplier = 1;
+      }
+      const wordScore = countWordScore(
+        wordMultiplier,
+        wordObject,
+        previousBoard,
+        values
+      );
+      turn.score += wordScore;
+      turn.words.push({
+        [wordObject.word.join("")]: wordScore,
+      });
+      return turn;
+    },
+    { words: [], score: 0 }
+  );
 };
 
 module.exports = {

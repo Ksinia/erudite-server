@@ -408,8 +408,8 @@ function factory(gameStream, lobbyStream) {
               const duplicatedWords = words.filter((word) => {
                 return currentGame.turns.some((turn) => {
                   if (turn.words.length > 0) {
-                    const listOfWords = turn.words.map(
-                      (wordObject) => Object.keys(wordObject)[0]
+                    const listOfWords = turn.words.map((wordObject) =>
+                      Object.keys(wordObject)[0].replace(/\*/gi, "")
                     );
                     return listOfWords.includes(word);
                   }
