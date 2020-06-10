@@ -443,7 +443,8 @@ function factory(gameStream, lobbyStream) {
                 };
                 // copy game board to previous board
                 // change game phase to validation
-                // return passedCount to 0
+                // do not need to return passedCount to 0,
+                // because the turn may me undone
                 await currentGame.update({
                   previousBoard: currentGame.board,
                   board: newBoard,
@@ -451,7 +452,6 @@ function factory(gameStream, lobbyStream) {
                   letters: updatedLetters,
                   // putLetters: putLetters,
                   previousLetters: currentGame.letters[currentUser.id],
-                  passedCount: 0,
                   validated: "unknown",
                   lettersChanged: false,
                   wordsForValidation: words,
@@ -536,6 +536,7 @@ function factory(gameStream, lobbyStream) {
             validated: "yes",
             turns: updatedTurns,
             wordsForValidation: [],
+            passedCount: 0,
           });
         } else if (validation === "no") {
           await currentGame.update({
