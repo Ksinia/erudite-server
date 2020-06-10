@@ -207,7 +207,7 @@ const getResult = (score, turns, userIds) => {
         Object.keys(word)[0].replace(/\*/gi, "").length === acc[0].word.length
       ) {
         acc.push({
-          word: [Object.keys(word)[0].replace(/\*/gi, "")],
+          word: Object.keys(word)[0].replace(/\*/gi, ""),
           user: turn.user,
         });
       }
@@ -226,7 +226,7 @@ const getResult = (score, turns, userIds) => {
         ];
       } else if (Object.values(word)[0] === acc[0].value) {
         acc.push({
-          word: [Object.keys(word)[0]].replace(/\*/gi, ""),
+          word: Object.keys(word)[0].replace(/\*/gi, ""),
           value: Object.values(word)[0],
           user: turn.user,
         });
