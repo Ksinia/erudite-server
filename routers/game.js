@@ -14,6 +14,7 @@ const {
   getResult,
 } = require("../services/game");
 const createGame = require("../services/create");
+const joinGame = require("../services/join");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
@@ -39,53 +40,18 @@ function factory(gameStream, lobbyStream) {
     const currentUser = req.user;
     const gameId = req.body.gameId;
     try {
-      const currentGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
-      const updatedUsers = currentGame.users.concat([currentUser]);
-      if (updatedUsers.length === currentGame.maxPlayers) {
-        await currentGame.update({
-          phase: "ready",
-        });
-      }
-      await currentGame.setUsers(updatedUsers);
-      const updatedGame = await game.findByPk(gameId, {
-        attributes: [
-          "id",
-          "phase",
-          "turnOrder",
-          "turn",
-          "validated",
-          "language",
-          "maxPlayers",
-        ],
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
+      const updatedGame = await joinGame(currentUser, gameId);
       const actionForLobby = {
         type: "UPDATED_GAME_IN_LOBBY",
         payload: updatedGame,
       };
-      const actionForLobbyString = JSON.stringify(actionForLobby);
-      lobbyStream.send(actionForLobbyString);
+      lobbyStream.send(JSON.stringify(actionForLobby));
       const actionForGame = {
         type: "GAME_UPDATED",
-        payload: { gameId, game: updatedGame },
+        payload: { gameId: updatedGame.id, game: updatedGame },
       };
-      const actionForGameString = JSON.stringify(actionForGame);
-      gameStream.send(actionForGameString);
-      res.send(actionForGameString);
+      gameStream.send(JSON.stringify(actionForGame));
+      res.send(actionForGame);
     } catch (error) {
       next(error);
     }
