@@ -13,56 +13,23 @@ const {
   giveLetters,
   getResult,
 } = require("../services/game");
+const createGame = require("../services/create");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
 
   router.post("/create", authMiddleware, async (req, res, next) => {
     const currentUser = req.user;
-    const { maxPlayers, language } = req.body;
+    const { maxPlayers, language, players: playersIds } = req.body;
     try {
-      const currentGame = await game.create({ maxPlayers, language });
-      const newGameId = currentGame.id;
-      let players = [];
-      let phase = "waiting";
-      if (req.body.players) {
-        players = await user.findAll({
-          where: {
-            id: req.body.players,
-          },
-        });
-        phase = "ready";
-      } else {
-        players = [currentUser];
-      }
-      await currentGame.setUsers(players);
-      await currentGame.update({ phase });
-      const updatedGame = await game.findByPk(newGameId, {
-        attributes: [
-          "id",
-          "phase",
-          "turnOrder",
-          "turn",
-          "validated",
-          "language",
-          "maxPlayers",
-        ],
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
-      const action = {
-        type: "NEW_GAME",
-        payload: updatedGame,
-      };
-      const string = JSON.stringify(action);
-
-      lobbyStream.send(string);
-      res.send(updatedGame);
+      const action = await createGame(
+        currentUser,
+        maxPlayers,
+        playersIds,
+        language
+      );
+      lobbyStream.send(JSON.stringify(action));
+      res.send(action.payload);
     } catch (error) {
       next(error);
     }
