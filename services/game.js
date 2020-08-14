@@ -94,6 +94,33 @@ const getHorizontalWords = (board, previousBoard) => {
   }, []);
 };
 
+const getWords = (newBoard, oldBoard) => {
+  const hWords = getHorizontalWords(newBoard, oldBoard).map((wordObject) =>
+    wordObject.word
+      .map((letter) => {
+        if (letter[0] === "*") {
+          return letter[1];
+        } else {
+          return letter;
+        }
+      })
+      .join("")
+  );
+  return hWords.concat(
+    getHorizontalWords(rotate(newBoard), rotate(oldBoard)).map((wordObject) =>
+      wordObject.word
+        .map((letter) => {
+          if (letter[0] === "*") {
+            return letter[1];
+          } else {
+            return letter;
+          }
+        })
+        .join("")
+    )
+  );
+};
+
 const rotate = (board) => {
   return Array(15)
     .fill(null)
@@ -311,4 +338,5 @@ module.exports = {
   substract,
   giveLetters,
   getResult,
+  getWords,
 };

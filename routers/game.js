@@ -1,20 +1,12 @@
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
 const { user, game } = require("../models");
-const lettersSets = require("../constants/letterSets");
-const {
-  getNextTurn,
-  updateGameLetters,
-  getHorizontalWords,
-  rotate,
-  turnWordsAndScore,
-  substract,
-  giveLetters,
-  getResult,
-} = require("../services/game");
+const { getNextTurn, substract, giveLetters } = require("../services/game");
 const createGame = require("../services/create");
 const joinGame = require("../services/join");
 const { getUpdatedGameForLobby, startGame } = require("../services/start");
+const makeTurn = require("../services/turn");
+const validateTurn = require("../services/validation");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
@@ -72,7 +64,7 @@ function factory(gameStream, lobbyStream) {
   });
 
   router.get("/game/:id", async (req, res, next) => {
-    const gameId = req.params.id;
+    const gameId = parseInt(req.params.id);
     try {
       const currentGame = await game.findByPk(gameId, {
         include: [
@@ -98,257 +90,36 @@ function factory(gameStream, lobbyStream) {
   //turn of the game
   router.post("/game/:id/turn", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
-    const currentUser = req.user;
-    const gameId = req.params.id;
-    const userBoard = req.body.userBoard;
-    const wildCardOnBoard = req.body.wildCardOnBoard;
+    const currentUserId = req.user.id;
+    const gameId = parseInt(req.params.id);
+    const { userBoard, wildCardOnBoard } = req.body;
     try {
-      const currentGame = await game.findByPk(gameId);
-      // check if game is in turn phase and if it is current user's turn
-      if (
-        currentGame.phase === "turn" &&
-        currentGame.turnOrder[currentGame.turn] === currentUser.id
-      ) {
-        //check if user passed
-        if (!userBoard.some((row) => row.some((letter) => letter))) {
-          // copy game board to previous board
-          // change game phase to next turn, no need to validate pass
-          // change passedCount qty
-          const newPassedQty = currentGame.passedCount + 1;
-          if (newPassedQty === currentGame.turnOrder.length * 2) {
-            let result = currentGame.result;
-            if (currentGame.turns.length !== 0) {
-              result = getResult(
-                currentGame.score,
-                currentGame.turns,
-                currentGame.turnOrder
-              );
-            }
-            await currentGame.update({
-              phase: "finished",
-              passedCount: newPassedQty,
-              lettersChanged: false,
-              result,
-              turns: [
-                ...currentGame.turns,
-                {
-                  words: [],
-                  score: 0,
-                  user: currentUser.id,
-                  changedLetters: false,
-                },
-              ],
-            });
-            const action2 = {
-              type: "DELETE_GAME_IN_LOBBY",
-              payload: gameId,
-            };
-            const string2 = JSON.stringify(action2);
-            lobbyStream.send(string2);
-          } else {
-            await currentGame.update({
-              previousBoard: currentGame.board,
-              phase: "turn",
-              turn: getNextTurn(currentGame),
-              passedCount: newPassedQty,
-              validated: "unknown",
-              turns: [
-                ...currentGame.turns,
-                {
-                  words: [],
-                  score: 0,
-                  user: currentUser.id,
-                  changedLetters: false,
-                },
-              ],
-            });
-          }
-        } else {
-          // user didn't pass
-          let userLetters = currentGame.letters[currentUser.id].slice();
-          let currentGameBoard = currentGame.board.map((row) => row.slice());
-          const wildCardsInHandQty = userLetters.filter(
-            (letter) => letter === "*"
-          ).length;
-          // check if user has changed wildcard (*) on board
-          let usedWildCardsQty = 0;
-          userBoard.forEach((row) => {
-            row.forEach((cell) => {
-              if (cell && cell[0] === "*") {
-                usedWildCardsQty += 1;
-              }
-            });
-          });
-          const allowedChangedWildCardQty =
-            usedWildCardsQty - wildCardsInHandQty;
-          let leftQty = allowedChangedWildCardQty;
-          let ok = true;
-          Object.keys(wildCardOnBoard).forEach((y) => {
-            Object.keys(wildCardOnBoard[y]).forEach((x) => {
-              const letter = wildCardOnBoard[y][x];
-              if (letter && leftQty > 0) {
-                const index = userLetters.indexOf(letter);
-                if (index === -1 || letter !== currentGameBoard[y][x][1]) {
-                  ok = false;
-                }
-                userLetters.splice(index, 1, "*");
-                currentGameBoard[y][x] = letter;
-                leftQty -= 1;
-              }
-            });
-          });
-          if (ok) {
-            // check if all letters in turn were in user's hand
-            // TODO: take possible duplicates into account
-            // TODO: rewrite, it doesn't work because of wild cards from board
-            // if (
-            //   !userBoard.some((row) =>
-            //     row.some((letter) => {
-            //       console.log(letter);
-            //       return (
-            //         letter !== null &&
-            //         ((letter[0] !== "*" && !userLetters.includes(letter)) ||
-            //           (letter[0] === "*" &&
-            //             (!userLetters.includes("*") ||
-            //               letter.length > 2 ||
-            //               !lettersSets[currentGame.language].letters.includes(
-            //                 letter[1]
-            //               ))))
-            //       );
-            //     })
-            //   )
-            // ) {
-
-            // check if all letters are placed on empty cells
-            if (
-              !userBoard.some((row, y) =>
-                row.some(
-                  (letter, x) =>
-                    letter !== null && currentGame.board[y][x] !== null
-                )
-              )
-            ) {
-              // add user letters to current board
-              const newBoard = currentGameBoard.map((row, y) =>
-                row.map((cell, x) => {
-                  if (cell === null && userBoard[y][x] !== null) {
-                    return userBoard[y][x];
-                  } else {
-                    return cell;
-                  }
-                })
-              );
-
-              // check if there is any duplicated word
-              //if no, proceed with updating game and sending it in stream
-              // if yes, don't update the game, send action with error as a response only
-              const hWords = getHorizontalWords(
-                newBoard,
-                currentGame.board
-              ).map((wordObject) =>
-                wordObject.word
-                  .map((letter) => {
-                    if (letter[0] === "*") {
-                      return letter[1];
-                    } else {
-                      return letter;
-                    }
-                  })
-                  .join("")
-              );
-              const words = hWords.concat(
-                getHorizontalWords(
-                  rotate(newBoard),
-                  rotate(currentGame.board)
-                ).map((wordObject) =>
-                  wordObject.word
-                    .map((letter) => {
-                      if (letter[0] === "*") {
-                        return letter[1];
-                      } else {
-                        return letter;
-                      }
-                    })
-                    .join("")
-                )
-              );
-
-              const duplicatedWords = words.filter((word) => {
-                return currentGame.turns.some((turn) => {
-                  if (turn.words.length > 0) {
-                    const listOfWords = turn.words.map((wordObject) =>
-                      Object.keys(wordObject)[0].replace(/\*/gi, "")
-                    );
-                    return listOfWords.includes(word);
-                  }
-                });
-              });
-              if (duplicatedWords && duplicatedWords.length > 0) {
-                const action = {
-                  type: "DUPLICATED_WORDS",
-                  payload: duplicatedWords,
-                };
-                res.send(JSON.stringify(action));
-                return;
-              } else {
-                // remove those letters from user hand
-                const putLetters = userBoard.reduce((acc, row) => {
-                  return acc.concat(
-                    row.reduce((accum, cell) => {
-                      if (cell) {
-                        accum.push(cell[0]);
-                      }
-                      return accum;
-                    }, [])
-                  );
-                }, []);
-
-                // extract put letters from all letters
-                const keepLetters = substract(userLetters, putLetters);
-                const updatedLetters = {
-                  ...currentGame.letters,
-                  [currentUser.id]: keepLetters,
-                };
-                // copy game board to previous board
-                // change game phase to validation
-                // do not need to return passedCount to 0,
-                // because the turn may me undone
-                await currentGame.update({
-                  previousBoard: currentGame.board,
-                  board: newBoard,
-                  phase: "validation",
-                  letters: updatedLetters,
-                  // putLetters: putLetters,
-                  previousLetters: currentGame.letters[currentUser.id],
-                  validated: "unknown",
-                  lettersChanged: false,
-                  wordsForValidation: words,
-                });
-              }
-            }
-          }
-          // }
+      const updatedGame = await makeTurn(
+        currentUserId,
+        gameId,
+        userBoard,
+        wildCardOnBoard
+      );
+      if (updatedGame.type === "DUPLICATED_WORDS") {
+        res.send(JSON.stringify(updatedGame));
+      } else {
+        if (updatedGame.phase === "finished") {
+          const lobbyAction = {
+            type: "DELETE_GAME_IN_LOBBY",
+            payload: gameId,
+          };
+          lobbyStream.send(JSON.stringify(lobbyAction));
         }
+        const responseAction = {
+          type: "NO_DUPLICATIONS",
+        };
+        res.send(JSON.stringify(responseAction));
+        const streamAction = {
+          type: "GAME_UPDATED",
+          payload: { gameId: updatedGame.id, game: updatedGame },
+        };
+        gameStream.send(JSON.stringify(streamAction));
       }
-      // fetch game from db
-      const updatedGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
-      const streamAction = {
-        type: "GAME_UPDATED",
-        payload: { gameId, game: updatedGame },
-      };
-      const responseAction = {
-        type: "NO_DUPLICATIONS",
-      };
-      res.send(JSON.stringify(responseAction));
-      gameStream.send(JSON.stringify(streamAction));
     } catch (error) {
       next(error);
     }
@@ -356,81 +127,20 @@ function factory(gameStream, lobbyStream) {
 
   router.post("/game/:id/approve", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
-    const currentUser = req.user;
-    const gameId = req.params.id;
+    const currentUserId = req.user.id;
+    const gameId = parseInt(req.params.id);
     const validation = req.body.validation;
-
     try {
-      const currentGame = await game.findByPk(gameId);
-      const newTurn = getNextTurn(currentGame);
-      // check if it is right phase and user to validate
-      // only user who's turn is next, can validate the turn
-      if (
-        (currentGame.phase === "validation",
-        currentGame.turnOrder.includes(currentUser.id) &&
-          currentUser.id === currentGame.turnOrder[newTurn])
-      ) {
-        if (validation === "yes") {
-          const currentTurnUserId = currentGame.turnOrder[currentGame.turn];
-          const bonus15 = currentGame.letters[currentTurnUserId].length === 0;
-          const values = lettersSets[currentGame.language].values;
-          const turn = turnWordsAndScore(
-            currentGame.board,
-            currentGame.previousBoard,
-            bonus15,
-            values
-          );
-          const updatedScore = {
-            ...currentGame.score,
-            [currentTurnUserId]: (currentGame.score[currentTurnUserId] +=
-              turn.score),
-          };
-          let updatedTurns = currentGame.turns;
-          // this condition is required because previously created games don't contain turns object
-          if (currentGame.turns) {
-            updatedTurns = [
-              ...currentGame.turns,
-              { ...turn, user: currentTurnUserId, changedLetters: false },
-            ];
-          }
-          const updatedGameLetters = updateGameLetters(currentGame);
-          await currentGame.update({
-            phase: "turn",
-            turn: newTurn,
-            letters: updatedGameLetters,
-            putLetters: [],
-            previousLetters: [],
-            score: updatedScore,
-            validated: "yes",
-            turns: updatedTurns,
-            wordsForValidation: [],
-            passedCount: 0,
-          });
-        } else if (validation === "no") {
-          await currentGame.update({
-            validated: "no",
-          });
-        }
-      }
-      const updatedGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
+      const updatedGame = await validateTurn(currentUserId, gameId, validation);
+      res.send(JSON.stringify(updatedGame.id));
       const action = {
         type: "GAME_UPDATED",
         payload: {
-          gameId,
+          gameId: updatedGame.id,
           game: updatedGame,
         },
       };
-      const string = JSON.stringify(action);
-      res.send(JSON.stringify(updatedGame.id));
-      gameStream.send(string);
+      gameStream.send(JSON.stringify(action));
     } catch (error) {
       next(error);
     }
@@ -439,7 +149,7 @@ function factory(gameStream, lobbyStream) {
   router.post("/game/:id/undo", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
     const currentUser = req.user;
-    const gameId = req.params.id;
+    const gameId = parseInt(req.params.id);
     try {
       const currentGame = await game.findByPk(gameId);
       // user can only undo own turn
@@ -477,7 +187,6 @@ function factory(gameStream, lobbyStream) {
           });
         }
       }
-
       const updatedGame = await game.findByPk(gameId, {
         include: [
           {
@@ -490,7 +199,7 @@ function factory(gameStream, lobbyStream) {
       const action = {
         type: "GAME_UPDATED",
         payload: {
-          gameId,
+          gameId: updatedGame.id,
           game: updatedGame,
         },
       };
@@ -505,7 +214,7 @@ function factory(gameStream, lobbyStream) {
   router.post("/game/:id/change", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
     const currentUser = req.user;
-    const gameId = req.params.id;
+    const gameId = parseInt(req.params.id);
     const lettersToChange = req.body.letters;
     try {
       const currentGame = await game.findByPk(gameId);
