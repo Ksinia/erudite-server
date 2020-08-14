@@ -7,6 +7,7 @@ const joinGame = require("../services/join");
 const { getUpdatedGameForLobby, startGame } = require("../services/start");
 const makeTurn = require("../services/turn");
 const validateTurn = require("../services/validation");
+const undoTurn = require("../services/undo");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
@@ -116,7 +117,7 @@ function factory(gameStream, lobbyStream) {
         res.send(JSON.stringify(responseAction));
         const streamAction = {
           type: "GAME_UPDATED",
-          payload: { gameId: updatedGame.id, game: updatedGame },
+          payload: { gameId, game: updatedGame },
         };
         gameStream.send(JSON.stringify(streamAction));
       }
@@ -136,7 +137,7 @@ function factory(gameStream, lobbyStream) {
       const action = {
         type: "GAME_UPDATED",
         payload: {
-          gameId: updatedGame.id,
+          gameId,
           game: updatedGame,
         },
       };
@@ -148,64 +149,19 @@ function factory(gameStream, lobbyStream) {
 
   router.post("/game/:id/undo", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
-    const currentUser = req.user;
+    const currentUserId = req.user.id;
     const gameId = parseInt(req.params.id);
     try {
-      const currentGame = await game.findByPk(gameId);
-      // user can only undo own turn
-      if (
-        currentGame.phase === "validation" &&
-        currentGame.turnOrder.includes(currentUser.id) &&
-        currentUser.id === currentGame.turnOrder[currentGame.turn]
-      ) {
-        if (
-          currentGame.previousLetters &&
-          currentGame.previousLetters.length > 0
-        ) {
-          await currentGame.update({
-            board: currentGame.previousBoard,
-            phase: "turn",
-            letters: {
-              ...currentGame.letters,
-              [currentUser.id]: currentGame.previousLetters,
-            },
-            putLetters: [],
-            previousLetters: [],
-          });
-        } else {
-          // TODO: get rid of all operations with putLetters in db
-          await currentGame.update({
-            board: currentGame.previousBoard,
-            phase: "turn",
-            letters: {
-              ...currentGame.letters,
-              [currentUser.id]: currentGame.letters[currentUser.id].concat(
-                currentGame.putLetters
-              ),
-            },
-            putLetters: [],
-          });
-        }
-      }
-      const updatedGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
+      const updatedGame = await undoTurn(currentUserId, gameId);
+      res.send(JSON.stringify(updatedGame.id));
       const action = {
         type: "GAME_UPDATED",
         payload: {
-          gameId: updatedGame.id,
+          gameId,
           game: updatedGame,
         },
       };
-      const string = JSON.stringify(action);
-      res.send(JSON.stringify(updatedGame.id));
-      gameStream.send(string);
+      gameStream.send(JSON.stringify(action));
     } catch (error) {
       next(error);
     }
