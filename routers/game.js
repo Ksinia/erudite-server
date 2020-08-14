@@ -95,28 +95,31 @@ function factory(gameStream, lobbyStream) {
         userBoard,
         wildCardOnBoard
       );
+
       if (updatedGame.type === "DUPLICATED_WORDS") {
-        res.send(JSON.stringify(updatedGame));
-      } else {
-        if (updatedGame.phase === "finished") {
-          const lobbyAction = {
-            type: "DELETE_GAME_IN_LOBBY",
-            payload: gameId,
-          };
-          lobbyStream.send(JSON.stringify(lobbyAction));
-        }
-        const responseAction = {
-          type: "NO_DUPLICATIONS",
-        };
-        res.send(JSON.stringify(responseAction));
-        const streamAction = {
-          type: "GAME_UPDATED",
-          payload: { gameId, game: updatedGame },
-        };
-        gameStream.send(JSON.stringify(streamAction));
-        const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        lobbyStream.send(JSON.stringify(lobbyAction));
+        res.send(updatedGame);
+        return;
       }
+
+      const responseAction = {
+        type: "NO_DUPLICATIONS",
+      };
+      res.send(responseAction);
+
+      const streamAction = {
+        type: "GAME_UPDATED",
+        payload: { gameId, game: updatedGame },
+      };
+      gameStream.send(JSON.stringify(streamAction));
+
+      let lobbyAction = getUpdatedGameForLobby(updatedGame);
+      if (updatedGame.phase === "finished") {
+        lobbyAction = {
+          type: "DELETE_GAME_IN_LOBBY",
+          payload: gameId,
+        };
+      }
+      lobbyStream.send(JSON.stringify(lobbyAction));
     } catch (error) {
       next(error);
     }
@@ -129,7 +132,7 @@ function factory(gameStream, lobbyStream) {
     const validation = req.body.validation;
     try {
       const updatedGame = await validateTurn(currentUserId, gameId, validation);
-      res.send(JSON.stringify(updatedGame.id));
+      res.send(updatedGame.id);
       const action = {
         type: "GAME_UPDATED",
         payload: {
@@ -151,7 +154,7 @@ function factory(gameStream, lobbyStream) {
     const gameId = parseInt(req.params.id);
     try {
       const updatedGame = await undoTurn(currentUserId, gameId);
-      res.send(JSON.stringify(updatedGame.id));
+      res.send(updatedGame.id);
       const action = {
         type: "GAME_UPDATED",
         payload: {
@@ -178,7 +181,7 @@ function factory(gameStream, lobbyStream) {
         gameId,
         lettersToChange
       );
-      res.send(JSON.stringify(updatedGame.id));
+      res.send(updatedGame.id);
       const action = {
         type: "GAME_UPDATED",
         payload: {
