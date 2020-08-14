@@ -3,7 +3,6 @@ const authMiddleware = require("../auth/middleware");
 const { user, game } = require("../models");
 const lettersSets = require("../constants/letterSets");
 const {
-  shuffle,
   getNextTurn,
   updateGameLetters,
   getHorizontalWords,
@@ -15,6 +14,7 @@ const {
 } = require("../services/game");
 const createGame = require("../services/create");
 const joinGame = require("../services/join");
+const { getUpdatedGameForLobby, startGame } = require("../services/start");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
@@ -46,12 +46,12 @@ function factory(gameStream, lobbyStream) {
         payload: updatedGame,
       };
       lobbyStream.send(JSON.stringify(actionForLobby));
-      const actionForGame = {
+      const updatedGameAction = {
         type: "GAME_UPDATED",
         payload: { gameId: updatedGame.id, game: updatedGame },
       };
-      gameStream.send(JSON.stringify(actionForGame));
-      res.send(actionForGame);
+      gameStream.send(JSON.stringify(updatedGameAction));
+      res.send(updatedGameAction);
     } catch (error) {
       next(error);
     }
@@ -60,77 +60,12 @@ function factory(gameStream, lobbyStream) {
   router.post("/start", authMiddleware, async (req, res, nxt) => {
     const gameId = req.body.gameId;
     try {
-      const currentGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
-      const turnOrder = shuffle(currentGame.users.map((user) => user.id));
-      const set = lettersSets[currentGame.language].letters;
-      // give letters to players
-      const lettersForGame = shuffle(set);
-      let acc = { pot: lettersForGame.slice() };
-      const letters = currentGame.users.reduce((acc, user) => {
-        if (!acc[user.id]) {
-          acc[user.id] = [];
-        }
-        while (acc[user.id].length !== 7) {
-          acc[user.id].push(
-            acc.pot.splice(Math.floor(Math.random() * acc.pot.length), 1)[0]
-          );
-        }
-        return acc;
-      }, acc);
-      const score = currentGame.users.reduce((acc, user) => {
-        acc[user.id] = 0;
-        return acc;
-      }, {});
-      await currentGame.update({
-        turnOrder,
-        letters,
-        score,
-        turns: [],
-        result: {},
-        phase: "turn",
-      });
-      const action = {
-        type: "GAME_UPDATED",
-        payload: { gameId, game: currentGame },
-      };
-      const string = JSON.stringify(action);
-      gameStream.send(string);
+      const updatedGameAction = await startGame(gameId);
+      gameStream.send(JSON.stringify(updatedGameAction));
       // this response is important
-      res.send(currentGame);
-
-      const updatedGameForLobby = await game.findByPk(gameId, {
-        attributes: [
-          "id",
-          "phase",
-          "turnOrder",
-          "turn",
-          "validated",
-          "language",
-          "maxPlayers",
-        ],
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
-
-      const action2 = {
-        type: "UPDATED_GAME_IN_LOBBY",
-        payload: updatedGameForLobby,
-      };
-      const string2 = JSON.stringify(action2);
-      lobbyStream.send(string2);
+      res.send(updatedGameAction.payload.game);
+      const lobbyUpdatedGameAction = await getUpdatedGameForLobby(gameId);
+      lobbyStream.send(JSON.stringify(lobbyUpdatedGameAction));
     } catch (error) {
       nxt(error);
     }
