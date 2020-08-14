@@ -1,5 +1,6 @@
 const { game: Game } = require("../models");
 const fetchGame = require("./fetchGame");
+const updateGame = require("./updateGame");
 
 /**
  * Undoes the turn and returns updated game
@@ -13,19 +14,19 @@ module.exports = async (currentUserId, gameId) => {
     currentUserId === game.turnOrder[game.turn]
   ) {
     if (game.previousLetters && game.previousLetters.length > 0) {
-      await game.update({
+      await updateGame(game, {
         board: game.previousBoard,
         phase: "turn",
         letters: {
           ...game.letters,
           [currentUserId]: game.previousLetters,
         },
-        putLetters: [],
+        // putLetters: [],
         previousLetters: [],
       });
     } else {
       // TODO: get rid of all operations with putLetters in db
-      await game.update({
+      await updateGame(game, {
         board: game.previousBoard,
         phase: "turn",
         letters: {

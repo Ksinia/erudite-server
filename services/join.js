@@ -1,4 +1,5 @@
 const { user: User, game: Game } = require("../models");
+const updateGame = require("./updateGame");
 /**
  * Adds the current user to the game
  */
@@ -16,7 +17,7 @@ module.exports = async (currentUser, gameId) => {
   // check if game ready to start by reaching maxPlayers
   // after new player joined
   if (game.users.length + 1 === game.maxPlayers) {
-    await game.update({
+    await updateGame(game, {
       phase: "ready",
     });
   }

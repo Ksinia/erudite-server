@@ -2,6 +2,7 @@ const { game: Game } = require("../models");
 const { getNextTurn, turnWordsAndScore, updateGameLetters } = require("./game");
 const lettersSets = require("../constants/letterSets");
 const fetchGame = require("./fetchGame");
+const updateGame = require("./updateGame");
 
 /**
  * Updates game accoring to validation and returns updated game
@@ -39,7 +40,7 @@ module.exports = async (currentUserId, gameId, validation) => {
         ];
       }
       const updatedGameLetters = updateGameLetters(game);
-      await game.update({
+      await updateGame(game, {
         phase: "turn",
         turn: newTurn,
         letters: updatedGameLetters,
@@ -52,7 +53,7 @@ module.exports = async (currentUserId, gameId, validation) => {
         passedCount: 0,
       });
     } else if (validation === "no") {
-      await game.update({
+      await updateGame(game, {
         validated: "no",
       });
     }

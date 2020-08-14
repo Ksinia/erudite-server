@@ -1,6 +1,7 @@
 const { game: Game } = require("../models");
 const { getWords, substract, getNextTurn, getResult } = require("./game");
 const fetchGame = require("./fetchGame");
+const updateGame = require("./updateGame");
 
 /**
  * Makes turn and returns updated game
@@ -21,7 +22,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
         if (game.turns.length !== 0) {
           result = getResult(game.score, game.turns, game.turnOrder);
         }
-        await game.update({
+        await updateGame(game, {
           phase: "finished",
           passedCount: newPassedQty,
           lettersChanged: false,
@@ -37,7 +38,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
           ],
         });
       } else {
-        await game.update({
+        await updateGame(game, {
           previousBoard: game.board,
           phase: "turn",
           turn: getNextTurn(game),
@@ -170,7 +171,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
             // change game phase to validation
             // do not need to return passedCount to 0,
             // because the turn may me undone
-            await game.update({
+            await updateGame(game, {
               previousBoard: game.board,
               board: newBoard,
               phase: "validation",

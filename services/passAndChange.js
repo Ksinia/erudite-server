@@ -1,5 +1,6 @@
 const { user: User, game: Game } = require("../models");
 const { getNextTurn, giveLetters, substract } = require("./game");
+const updateGame = require("./updateGame");
 
 /**
  * Updates game accoring to validation and returns updated game
@@ -26,7 +27,7 @@ module.exports = async (currentUserId, gameId, lettersToChange) => {
     const updatedUserLetters = updatedBagAndUserLetters.userLetters;
     const updatedPot = updatedBagAndUserLetters.bag;
 
-    await game.update({
+    await updateGame(game, {
       previousBoard: game.board,
       phase: "turn",
       turn: getNextTurn(game),
