@@ -1,4 +1,5 @@
-const { user: User, game: Game } = require("../models");
+const { game: Game } = require("../models");
+const fetchGame = require("./fetchGame");
 
 /**
  * Undoes the turn and returns updated game
@@ -35,13 +36,5 @@ module.exports = async (currentUserId, gameId) => {
       });
     }
   }
-  return Game.findByPk(gameId, {
-    include: [
-      {
-        model: User,
-        as: "users",
-        attributes: ["id", "name"],
-      },
-    ],
-  });
+  return fetchGame(gameId);
 };

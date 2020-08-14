@@ -1,13 +1,13 @@
 const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
-const { user, game } = require("../models");
-const { getNextTurn, substract, giveLetters } = require("../services/game");
 const createGame = require("../services/create");
 const joinGame = require("../services/join");
 const { getUpdatedGameForLobby, startGame } = require("../services/start");
 const makeTurn = require("../services/turn");
 const validateTurn = require("../services/validation");
 const undoTurn = require("../services/undo");
+const passAndChange = require("../services/passAndChange");
+const fetchGame = require("../services/fetchGame");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
@@ -16,12 +16,16 @@ function factory(gameStream, lobbyStream) {
     const currentUser = req.user;
     const { maxPlayers, language, players: playersIds } = req.body;
     try {
-      const action = await createGame(
+      const updatedGame = await createGame(
         currentUser,
         maxPlayers,
         playersIds,
         language
       );
+      const action = {
+        type: "NEW_GAME",
+        payload: updatedGame,
+      };
       lobbyStream.send(JSON.stringify(action));
       res.send(action.payload);
     } catch (error) {
@@ -67,22 +71,13 @@ function factory(gameStream, lobbyStream) {
   router.get("/game/:id", async (req, res, next) => {
     const gameId = parseInt(req.params.id);
     try {
-      const currentGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
+      const game = await fetchGame(gameId);
       const action = {
         type: "GAME_UPDATED",
-        payload: { gameId, game: currentGame },
+        payload: { gameId, game },
       };
-      const string = JSON.stringify(action);
       gameStream.init(req, res);
-      gameStream.send(string);
+      gameStream.send(JSON.stringify(action));
     } catch (error) {
       next(error);
     }
@@ -169,61 +164,16 @@ function factory(gameStream, lobbyStream) {
 
   router.post("/game/:id/change", authMiddleware, async (req, res, next) => {
     // get user from authmiddleware
-    const currentUser = req.user;
+    const currentUserId = req.user.id;
     const gameId = parseInt(req.params.id);
     const lettersToChange = req.body.letters;
     try {
-      const currentGame = await game.findByPk(gameId);
-      // user can exchange letters only in his turn
-      if (
-        currentGame.phase === "turn" &&
-        currentGame.turnOrder.includes(currentUser.id) &&
-        currentUser.id === currentGame.turnOrder[currentGame.turn]
-      ) {
-        //check if user exchanges his own letters
-
-        // substract letters to change
-        const previousUserLetters = currentGame.letters[currentUser.id];
-        const remainingLetters = substract(
-          previousUserLetters,
-          lettersToChange
-        );
-        // give new letters to user
-        const updatedBagAndUserLetters = giveLetters(
-          currentGame.letters.pot,
-          remainingLetters,
-          lettersToChange
-        );
-        const updatedUserLetters = updatedBagAndUserLetters.userLetters;
-        const updatedPot = updatedBagAndUserLetters.bag;
-
-        await currentGame.update({
-          previousBoard: currentGame.board,
-          phase: "turn",
-          turn: getNextTurn(currentGame),
-          letters: {
-            ...currentGame.letters,
-            pot: updatedPot,
-            [currentUser.id]: updatedUserLetters,
-          },
-          putLetters: [],
-          previousLetters: [],
-          lettersChanged: true,
-          turns: [
-            ...currentGame.turns,
-            { words: [], score: 0, user: currentUser.id, changedLetters: true },
-          ],
-        });
-      }
-      const updatedGame = await game.findByPk(gameId, {
-        include: [
-          {
-            model: user,
-            as: "users",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
+      const updatedGame = await passAndChange(
+        currentUserId,
+        gameId,
+        lettersToChange
+      );
+      res.send(JSON.stringify(updatedGame.id));
       const action = {
         type: "GAME_UPDATED",
         payload: {
@@ -231,9 +181,7 @@ function factory(gameStream, lobbyStream) {
           game: updatedGame,
         },
       };
-      const string = JSON.stringify(action);
-      res.send(JSON.stringify(updatedGame.id));
-      gameStream.send(string);
+      gameStream.send(JSON.stringify(action));
     } catch (error) {
       next(error);
     }

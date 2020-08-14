@@ -3,6 +3,7 @@ const { user: User, game: Game } = require("../models");
  * Creates a new game with current user as only player if playerIds are undefined
  * or with all users from playersIds, which is set
  * when user clicked 'play again with same players' in finished game
+ * returns game object
  */
 module.exports = async (currentUser, maxPlayers, playersIds, language) => {
   let users = [];
@@ -20,7 +21,7 @@ module.exports = async (currentUser, maxPlayers, playersIds, language) => {
   const game = await Game.create({ maxPlayers, language, phase });
   // currently it's impossible to create with existing association
   await game.setUsers(users);
-  const updatedGame = await Game.findByPk(game.id, {
+  return Game.findByPk(game.id, {
     attributes: [
       "id",
       "phase",
@@ -38,8 +39,4 @@ module.exports = async (currentUser, maxPlayers, playersIds, language) => {
       },
     ],
   });
-  return {
-    type: "NEW_GAME",
-    payload: updatedGame,
-  };
 };

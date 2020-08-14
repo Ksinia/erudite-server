@@ -1,6 +1,7 @@
-const { user: User, game: Game } = require("../models");
+const { game: Game } = require("../models");
 const { getNextTurn, turnWordsAndScore, updateGameLetters } = require("./game");
 const lettersSets = require("../constants/letterSets");
+const fetchGame = require("./fetchGame");
 
 /**
  * Updates game accoring to validation and returns updated game
@@ -56,13 +57,5 @@ module.exports = async (currentUserId, gameId, validation) => {
       });
     }
   }
-  return Game.findByPk(gameId, {
-    include: [
-      {
-        model: User,
-        as: "users",
-        attributes: ["id", "name"],
-      },
-    ],
-  });
+  return fetchGame(gameId);
 };

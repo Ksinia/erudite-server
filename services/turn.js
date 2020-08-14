@@ -1,5 +1,6 @@
-const { user: User, game: Game } = require("../models");
+const { game: Game } = require("../models");
 const { getWords, substract, getNextTurn, getResult } = require("./game");
+const fetchGame = require("./fetchGame");
 
 /**
  * Makes turn and returns updated game
@@ -187,13 +188,5 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
     }
   }
   // fetch game from db
-  return Game.findByPk(gameId, {
-    include: [
-      {
-        model: User,
-        as: "users",
-        attributes: ["id", "name"],
-      },
-    ],
-  });
+  return fetchGame(gameId);
 };
