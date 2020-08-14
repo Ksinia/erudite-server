@@ -20,4 +20,35 @@ const archivateOldGames = async () => {
   }
 };
 
-module.exports = { archivateOldGames };
+/**
+ * Extracts properties needed for lobby from the game object
+ * @returns action for updated game in lobby
+ */
+const getUpdatedGameForLobby = (game) => {
+  const {
+    id,
+    phase,
+    turnOrder,
+    turn,
+    validated,
+    language,
+    maxPlayers,
+    users,
+  } = game;
+  const lobbyGame = {
+    id,
+    phase,
+    turnOrder,
+    turn,
+    validated,
+    language,
+    maxPlayers,
+    users,
+  };
+  return {
+    type: "UPDATED_GAME_IN_LOBBY",
+    payload: lobbyGame,
+  };
+};
+
+module.exports = { archivateOldGames, getUpdatedGameForLobby };

@@ -1,33 +1,9 @@
 const { user: User, game: Game } = require("../models");
 const { shuffle } = require("../services/game");
 const lettersSets = require("../constants/letterSets");
+const updateGame = require("./updateGame");
 
-const getUpdatedGameForLobby = async (gameId) => {
-  const game = await Game.findByPk(gameId, {
-    attributes: [
-      "id",
-      "phase",
-      "turnOrder",
-      "turn",
-      "validated",
-      "language",
-      "maxPlayers",
-    ],
-    include: [
-      {
-        model: User,
-        as: "users",
-        attributes: ["id", "name"],
-      },
-    ],
-  });
-  return {
-    type: "UPDATED_GAME_IN_LOBBY",
-    payload: game,
-  };
-};
-
-const startGame = async (gameId) => {
+module.exports = async (gameId) => {
   const game = await Game.findByPk(gameId, {
     include: [
       {
@@ -58,7 +34,7 @@ const startGame = async (gameId) => {
     return acc;
   }, {});
   // update database call updates currentGame object
-  await game.update({
+  await updateGame(game, {
     turnOrder,
     letters,
     score,
@@ -66,10 +42,5 @@ const startGame = async (gameId) => {
     result: {},
     phase: "turn",
   });
-  return {
-    type: "GAME_UPDATED",
-    payload: { gameId, game },
-  };
+  return game;
 };
-
-module.exports = { getUpdatedGameForLobby, startGame };

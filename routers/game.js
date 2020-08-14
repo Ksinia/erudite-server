@@ -2,7 +2,8 @@ const { Router } = require("express");
 const authMiddleware = require("../auth/middleware");
 const createGame = require("../services/create");
 const joinGame = require("../services/join");
-const { getUpdatedGameForLobby, startGame } = require("../services/start");
+const startGame = require("../services/start");
+const { getUpdatedGameForLobby } = require("../services/lobby");
 const makeTurn = require("../services/turn");
 const validateTurn = require("../services/validation");
 const undoTurn = require("../services/undo");
@@ -22,11 +23,8 @@ function factory(gameStream, lobbyStream) {
         playersIds,
         language
       );
-      const action = {
-        type: "NEW_GAME",
-        payload: updatedGame,
-      };
-      lobbyStream.send(JSON.stringify(action));
+      const lobbyAction = getUpdatedGameForLobby(updatedGame);
+      lobbyStream.send(JSON.stringify(lobbyAction));
       res.send(action.payload);
     } catch (error) {
       next(error);
@@ -38,11 +36,8 @@ function factory(gameStream, lobbyStream) {
     const gameId = req.body.gameId;
     try {
       const updatedGame = await joinGame(currentUser, gameId);
-      const actionForLobby = {
-        type: "UPDATED_GAME_IN_LOBBY",
-        payload: updatedGame,
-      };
-      lobbyStream.send(JSON.stringify(actionForLobby));
+      const lobbyAction = getUpdatedGameForLobby(updatedGame);
+      lobbyStream.send(JSON.stringify(lobbyAction));
       const updatedGameAction = {
         type: "GAME_UPDATED",
         payload: { gameId: updatedGame.id, game: updatedGame },
@@ -57,12 +52,16 @@ function factory(gameStream, lobbyStream) {
   router.post("/start", authMiddleware, async (req, res, nxt) => {
     const gameId = req.body.gameId;
     try {
-      const updatedGameAction = await startGame(gameId);
+      const updatedGame = await startGame(gameId);
+      const updatedGameAction = {
+        type: "GAME_UPDATED",
+        payload: { gameId, game: updatedGame },
+      };
       gameStream.send(JSON.stringify(updatedGameAction));
       // this response is important
       res.send(updatedGameAction.payload.game);
-      const lobbyUpdatedGameAction = await getUpdatedGameForLobby(gameId);
-      lobbyStream.send(JSON.stringify(lobbyUpdatedGameAction));
+      const lobbyAction = getUpdatedGameForLobby(updatedGame);
+      lobbyStream.send(JSON.stringify(lobbyAction));
     } catch (error) {
       nxt(error);
     }
@@ -115,6 +114,8 @@ function factory(gameStream, lobbyStream) {
           payload: { gameId, game: updatedGame },
         };
         gameStream.send(JSON.stringify(streamAction));
+        const lobbyAction = getUpdatedGameForLobby(updatedGame);
+        lobbyStream.send(JSON.stringify(lobbyAction));
       }
     } catch (error) {
       next(error);
@@ -137,6 +138,8 @@ function factory(gameStream, lobbyStream) {
         },
       };
       gameStream.send(JSON.stringify(action));
+      const lobbyAction = getUpdatedGameForLobby(updatedGame);
+      lobbyStream.send(JSON.stringify(lobbyAction));
     } catch (error) {
       next(error);
     }
@@ -157,6 +160,8 @@ function factory(gameStream, lobbyStream) {
         },
       };
       gameStream.send(JSON.stringify(action));
+      const lobbyAction = getUpdatedGameForLobby(updatedGame);
+      lobbyStream.send(JSON.stringify(lobbyAction));
     } catch (error) {
       next(error);
     }
@@ -182,6 +187,8 @@ function factory(gameStream, lobbyStream) {
         },
       };
       gameStream.send(JSON.stringify(action));
+      const lobbyAction = getUpdatedGameForLobby(updatedGame);
+      lobbyStream.send(JSON.stringify(lobbyAction));
     } catch (error) {
       next(error);
     }
