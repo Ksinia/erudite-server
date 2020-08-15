@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
   User.associate = function (models) {
     User.belongsToMany(models.Game, {
       as: "games",
-      through: "Game_User",
+      through: models.Game_User,
     });
   };
 
