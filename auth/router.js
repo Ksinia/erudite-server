@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { toJWT } = require("./jwt");
-const { user } = require("../models");
+const { User } = require("../models");
 const bcrypt = require("bcrypt");
 const authMiddleware = require("../auth/middleware");
 
@@ -11,7 +11,7 @@ async function login(res, next, name = null, password = null) {
     });
   } else {
     try {
-      const currentUser = await user.findOne({
+      const currentUser = await User.findOne({
         where: { name: name },
       });
       if (!currentUser) {

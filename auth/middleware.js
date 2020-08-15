@@ -1,4 +1,4 @@
-const { user } = require("../models");
+const { User } = require("../models");
 const { toData } = require("./jwt");
 
 function auth(req, res, next) {
@@ -7,8 +7,7 @@ function auth(req, res, next) {
   if (auth && auth[0] === "Bearer" && auth[1]) {
     try {
       const data = toData(auth[1]);
-      user
-        .findByPk(data.userId)
+      User.findByPk(data.userId)
         .then((user) => {
           if (!user) return next("User does not exist");
 
