@@ -15,8 +15,8 @@
             "charset": "utf8",
             "indexes": []
         },
-        "games": {
-            "tableName": "games",
+        "Games": {
+            "tableName": "Games",
             "schema": {
                 "id": {
                     "allowNull": false,
@@ -179,33 +179,33 @@
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
                 },
-                "userId": {
+                "UserId": {
                     "allowNull": true,
                     "references": {
-                        "model": "users",
+                        "model": "Users",
                         "key": "id"
                     },
                     "onDelete": "SET NULL",
                     "onUpdate": "CASCADE",
-                    "field": "userId",
+                    "field": "UserId",
                     "seqType": "Sequelize.INTEGER"
                 },
-                "gameId": {
+                "GameId": {
                     "allowNull": true,
                     "references": {
-                        "model": "games",
+                        "model": "Games",
                         "key": "id"
                     },
                     "onDelete": "SET NULL",
                     "onUpdate": "CASCADE",
-                    "field": "gameId",
+                    "field": "GameId",
                     "seqType": "Sequelize.INTEGER"
                 }
             },
             "indexes": []
         },
-        "users": {
-            "tableName": "users",
+        "Users": {
+            "tableName": "Users",
             "schema": {
                 "id": {
                     "allowNull": false,
@@ -242,8 +242,8 @@
             },
             "indexes": []
         },
-        "game_user": {
-            "tableName": "game_user",
+        "Game_User": {
+            "tableName": "Game_User",
             "schema": {
                 "createdAt": {
                     "allowNull": false,
@@ -255,31 +255,31 @@
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
                 },
-                "gameId": {
+                "GameId": {
                     "primaryKey": true,
                     "references": {
-                        "model": "games",
+                        "model": "Games",
                         "key": "id"
                     },
                     "onDelete": "CASCADE",
                     "onUpdate": "CASCADE",
-                    "field": "gameId",
+                    "field": "GameId",
                     "seqType": "Sequelize.INTEGER"
                 },
-                "userId": {
+                "UserId": {
                     "primaryKey": true,
                     "references": {
-                        "model": "users",
+                        "model": "Users",
                         "key": "id"
                     },
                     "onDelete": "CASCADE",
                     "onUpdate": "CASCADE",
-                    "field": "userId",
+                    "field": "UserId",
                     "seqType": "Sequelize.INTEGER"
                 }
             },
             "indexes": []
         }
     },
-    "revision": 19
+    "revision": 20
 }

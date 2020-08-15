@@ -6,8 +6,8 @@ module.exports = (sequelize, DataTypes) => {
     name: { type: DataTypes.STRING },
   });
   Message.associate = function (models) {
-    Message.belongsTo(models.user);
-    Message.belongsTo(models.game);
+    Message.belongsTo(models.User);
+    Message.belongsTo(models.Game);
   };
   return Message;
 };

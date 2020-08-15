@@ -1,7 +1,7 @@
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
-  const Game = sequelize.define("game", {
+  const Game = sequelize.define("Game", {
     language: {
       type: DataTypes.ENUM("ru", "en"),
       defaultValue: "ru",
@@ -57,8 +57,8 @@ module.exports = (sequelize, DataTypes) => {
     },
   });
   Game.associate = function (models) {
-    Game.belongsToMany(models.user, {
-      through: "game_user",
+    Game.belongsToMany(models.User, {
+      through: "Game_User",
     });
   };
   return Game;
