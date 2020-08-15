@@ -60,7 +60,6 @@ module.exports = (sequelize, DataTypes) => {
     Game.belongsToMany(models.user, {
       through: "game_user",
     });
-    Game.belongsTo(models.room);
   };
   return Game;
 };

@@ -17,13 +17,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
     },
   });
-  User.associate = function (models) {
-    User.belongsToMany(models.room, {
-      through: {
-        name: "room_user",
-      },
-    });
-  };
+
   User.associate = function (models) {
     User.belongsToMany(models.game, {
       through: "game_user",
