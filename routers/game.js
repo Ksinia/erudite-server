@@ -25,7 +25,7 @@ function factory(gameStream, lobbyStream) {
       );
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
       lobbyStream.send(JSON.stringify(lobbyAction));
-      res.send(action.payload);
+      res.send(lobbyAction.payload);
     } catch (error) {
       next(error);
     }
