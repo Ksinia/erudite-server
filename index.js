@@ -3,14 +3,11 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
 
-const db = require("./models");
-const { user, game } = require("./models");
+const { Sequelize, User, Game, Message } = require("./models");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
 const { archivateOldGames } = require("./services/lobby.js");
-const { user: User } = require("./models");
-const { Message } = require("./models");
 const { toData } = require("./auth/jwt");
 
 const app = express();
@@ -77,7 +74,7 @@ io.on("connection", async (socket) => {
 
 app.get("/stream", async (req, res, next) => {
   try {
-    let games = await game.findAll({
+    let games = await Game.findAll({
       attributes: [
         "id",
         "phase",
@@ -89,13 +86,13 @@ app.get("/stream", async (req, res, next) => {
       ],
       where: {
         phase: {
-          [db.Sequelize.Op.not]: "finished",
+          [Sequelize.Op.not]: "finished",
         },
         archived: false,
       },
       include: [
         {
-          model: user,
+          model: User,
           attributes: ["id", "name"],
         },
       ],

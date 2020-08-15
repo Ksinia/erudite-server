@@ -1,10 +1,9 @@
 const { Router } = require("express");
-const { User, Game } = require("../models");
+const { User, Game, Sequelize } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");
 const { toJWT } = require("../auth/jwt");
-const db = require("../models");
 
 const router = new Router();
 
@@ -113,7 +112,7 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
 
           where: {
             id: {
-              [db.Sequelize.Op.eq]: currentUser.id,
+              [Sequelize.Op.eq]: currentUser.id,
             },
           },
         },
