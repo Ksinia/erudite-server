@@ -1,4 +1,4 @@
-const { user: User, game: Game } = require("../models");
+const { User, Game } = require("../models");
 /**
  * Creates a new game with current user as only player if playerIds are undefined
  * or with all users from playersIds, which is set

@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { user: User, game: Game } = require("../models");
+const { User, Game } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");

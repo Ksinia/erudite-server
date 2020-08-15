@@ -1,4 +1,4 @@
-const { game: Game, Sequelize } = require("../models");
+const { Game, Sequelize } = require("../models");
 
 const archivateOldGames = async () => {
   const date = new Date().setDate(new Date().getDate() - 7);

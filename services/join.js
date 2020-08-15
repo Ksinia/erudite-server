@@ -1,4 +1,4 @@
-const { user: User, game: Game } = require("../models");
+const { User, Game } = require("../models");
 const updateGame = require("./updateGame");
 /**
  * Adds the current user to the game

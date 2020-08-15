@@ -1,4 +1,4 @@
-const { user: User, game: Game } = require("../models");
+const { User, Game } = require("../models");
 const { shuffle } = require("../services/game");
 const lettersSets = require("../constants/letterSets");
 const updateGame = require("./updateGame");

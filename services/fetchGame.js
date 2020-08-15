@@ -1,4 +1,4 @@
-const { user: User, game: Game } = require("../models");
+const { User, Game } = require("../models");
 /**
  * Returns game object from db
  */

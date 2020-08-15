@@ -1,4 +1,4 @@
-const { game: Game } = require("../models");
+const { Game } = require("../models");
 const { getNextTurn, turnWordsAndScore, updateGameLetters } = require("./game");
 const lettersSets = require("../constants/letterSets");
 const fetchGame = require("./fetchGame");
