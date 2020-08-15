@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { user, game } = require("../models");
+const { user: User, game: Game } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");
@@ -17,7 +17,7 @@ router.post("/signup", async (req, res, next) => {
   }
   let userWithSameName = null;
   try {
-    userWithSameName = await user.findOne({
+    userWithSameName = await User.findOne({
       where: { name: req.body.name },
     });
   } catch (error) {
@@ -31,7 +31,7 @@ router.post("/signup", async (req, res, next) => {
       password: bcrypt.hashSync(req.body.password, 10),
     };
     try {
-      const newUser = await user.create(userData);
+      const newUser = await User.create(userData);
       login(res, next, newUser.name, req.body.password);
     } catch (error) {
       if (error.name === "SequelizeValidationError") {
@@ -73,7 +73,7 @@ router.post("/generate-link", async (req, res, next) => {
     return;
   } else {
     try {
-      const currentUser = await user.findOne({
+      const currentUser = await User.findOne({
         where: { name: req.body.name },
       });
       if (!currentUser) {
@@ -98,7 +98,7 @@ router.post("/generate-link", async (req, res, next) => {
 router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
   const currentUser = req.user;
   try {
-    const gameIds = await game.findAll({
+    const gameIds = await Game.findAll({
       order: [["updatedAt", "DESC"]],
       where: {
         phase: "finished",
@@ -107,7 +107,7 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
       raw: true,
       include: [
         {
-          model: user,
+          model: User,
           attributes: ["id"],
           raw: true,
 

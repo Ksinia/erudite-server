@@ -1,16 +1,16 @@
-const db = require("../models");
+const { game: Game, Sequelize } = require("../models");
 
 const archivateOldGames = async () => {
   const date = new Date().setDate(new Date().getDate() - 7);
-  const games = await db.game.findAll({
+  const games = await Game.findAll({
     attributes: ["id", "updatedAt"],
     where: {
       phase: {
-        [db.Sequelize.Op.not]: "finished",
+        [Sequelize.Op.not]: "finished",
       },
       archived: "FALSE",
       updatedAt: {
-        [db.Sequelize.Op.lt]: date,
+        [Sequelize.Op.lt]: date,
       },
     },
   });
