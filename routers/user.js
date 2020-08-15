@@ -107,6 +107,7 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
       include: [
         {
           model: User,
+          as: "users",
           attributes: ["id"],
           raw: true,
 

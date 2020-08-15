@@ -44,7 +44,7 @@ io.on("connection", async (socket) => {
     const user = await User.findByPk(data.userId);
     socket.playerId = user.id || -1;
     const allMessages = await Message.findAll({
-      where: { gameId },
+      where: { GameId: gameId },
       order: [["updatedAt", "DESC"]],
     });
     socket.send({ type: "ALL_MESSAGES", payload: allMessages });
@@ -93,6 +93,7 @@ app.get("/stream", async (req, res, next) => {
       include: [
         {
           model: User,
+          as: "users",
           attributes: ["id", "name"],
         },
       ],

@@ -58,6 +58,7 @@ module.exports = (sequelize, DataTypes) => {
   });
   Game.associate = function (models) {
     Game.belongsToMany(models.User, {
+      as: "users",
       through: "Game_User",
     });
   };
