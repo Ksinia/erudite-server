@@ -60,8 +60,8 @@ io.on("connection", async (socket) => {
         const newMessage = Message.create({
           text: message,
           name: user.name,
-          gameId,
-          userId: socket.playerId,
+          GameId: gameId,
+          UserId: socket.playerId,
         });
       });
 
