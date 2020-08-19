@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
 
-const { Sequelize, User, Game, Message } = require("./models");
+const { Sequelize, User, Game, Message, Game_User } = require("./models");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
@@ -14,6 +14,9 @@ const app = express();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http, {
   path: "/chat",
+});
+const lobbyIo = require("socket.io")(http, {
+  path: "/lobby",
 });
 const port = process.env.PORT || 4000;
 
@@ -41,7 +44,9 @@ io.on("connection", async (socket) => {
   const { jwt, gameId } = socket.handshake.query;
   const data = toData(jwt);
   try {
-    const user = await User.findByPk(data.userId);
+    const user = await User.findByPk(data.userId, {
+      attributes: ["id", "name"],
+    });
     socket.playerId = user.id || -1;
     const allMessages = await Message.findAll({
       where: { GameId: gameId },
@@ -64,9 +69,75 @@ io.on("connection", async (socket) => {
           UserId: socket.playerId,
         });
       });
+      const v = await Game_User.findOne({
+        where: { GameId: gameId, UserId: user.id },
+      });
+      v.visit = new Date();
+      v.save();
 
       socket.on("disconnect", () => {});
     }
+  } catch (error) {
+    console.log(error);
+  }
+});
+lobbyIo.on("connection", async (socket) => {
+  const { jwt } = socket.handshake.query;
+  const data = toData(jwt);
+  try {
+    const user = await User.findByPk(data.userId, {
+      benchmark: true,
+      logging: console.log,
+      attributes: ["id"],
+    });
+
+    socket.playerId = user.id || -1;
+
+    const messagesCountList = await Game.findAll({
+      benchmark: true,
+      logging: console.log,
+      attributes: ["id", [Sequelize.fn("COUNT", "*"), "messagesCount"]],
+      include: [
+        {
+          model: User,
+          attributes: [],
+          as: "users",
+          through: Game_User,
+          where: { id: user.id },
+        },
+        {
+          model: Message,
+          as: "messages",
+          attributes: [],
+          where: {
+            createdAt: {
+              [Sequelize.Op.gt]: Sequelize.col("users->Game_User.visit"),
+            },
+            UserId: { [Sequelize.Op.not]: user.id },
+          },
+        },
+      ],
+      where: {
+        phase: {
+          [Sequelize.Op.not]: "finished",
+        },
+        archived: "FALSE",
+      },
+      group: [
+        "Game.id",
+        "users->Game_User.visit",
+        "users->Game_User.createdAt",
+        "users->Game_User.updatedAt",
+        "users->Game_User.GameId",
+        "users->Game_User.UserId",
+      ],
+    });
+
+    const count = messagesCountList.reduce((acc, el) => {
+      acc[el.dataValues.id] = parseInt(el.dataValues.messagesCount);
+      return acc;
+    }, {});
+    socket.send({ type: "MESSAGES_COUNT", payload: count });
   } catch (error) {
     console.log(error);
   }

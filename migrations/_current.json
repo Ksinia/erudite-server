@@ -159,6 +159,7 @@
                         "internal": true,
                         "value": "Sequelize.NOW"
                     },
+                    "allowNull": false,
                     "field": "visit",
                     "seqType": "Sequelize.DATE"
                 },
@@ -225,17 +226,6 @@
                     "field": "updatedAt",
                     "seqType": "Sequelize.DATE"
                 },
-                "UserId": {
-                    "allowNull": true,
-                    "references": {
-                        "model": "Users",
-                        "key": "id"
-                    },
-                    "onDelete": "SET NULL",
-                    "onUpdate": "CASCADE",
-                    "field": "UserId",
-                    "seqType": "Sequelize.INTEGER"
-                },
                 "GameId": {
                     "allowNull": true,
                     "references": {
@@ -245,6 +235,17 @@
                     "onDelete": "SET NULL",
                     "onUpdate": "CASCADE",
                     "field": "GameId",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "UserId": {
+                    "allowNull": true,
+                    "references": {
+                        "model": "Users",
+                        "key": "id"
+                    },
+                    "onDelete": "SET NULL",
+                    "onUpdate": "CASCADE",
+                    "field": "UserId",
                     "seqType": "Sequelize.INTEGER"
                 }
             },
@@ -289,5 +290,5 @@
             "indexes": []
         }
     },
-    "revision": 21
+    "revision": 22
 }

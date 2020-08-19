@@ -61,6 +61,9 @@ module.exports = (sequelize, DataTypes) => {
       as: "users",
       through: models.Game_User,
     });
+    Game.hasMany(models.Message, {
+      as: "messages",
+    });
   };
   return Game;
 };
