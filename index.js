@@ -9,6 +9,7 @@ const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
 const { archivateOldGames } = require("./services/lobby.js");
 const { toData } = require("./auth/jwt");
+const { sendActiveGameNotifications } = require("./services/mail");
 
 const app = express();
 const http = require("http").createServer(app);
@@ -72,8 +73,10 @@ io.on("connection", async (socket) => {
       const v = await Game_User.findOne({
         where: { GameId: gameId, UserId: user.id },
       });
-      v.visit = new Date();
-      v.save();
+      if (v) {
+        v.visit = new Date();
+        v.save();
+      }
 
       socket.on("disconnect", () => {});
     }
@@ -185,3 +188,5 @@ app.get("/stream", async (req, res, next) => {
 http.listen(port, () => console.log(`Listening on port: ${port}`));
 archivateOldGames();
 setInterval(archivateOldGames, 1000 * 60 * 60 * 24);
+sendActiveGameNotifications();
+setInterval(sendActiveGameNotifications, 1000 * 60 * 60 * 24);

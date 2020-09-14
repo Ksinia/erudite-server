@@ -9,6 +9,7 @@ const validateTurn = require("../services/validation");
 const undoTurn = require("../services/undo");
 const passAndChange = require("../services/passAndChange");
 const fetchGame = require("../services/fetchGame");
+const { sendFinishedGameNotifications } = require("../services/mail");
 
 function factory(gameStream, lobbyStream) {
   const router = new Router();
@@ -118,6 +119,7 @@ function factory(gameStream, lobbyStream) {
           type: "DELETE_GAME_IN_LOBBY",
           payload: gameId,
         };
+        sendFinishedGameNotifications(gameId);
       }
       lobbyStream.send(JSON.stringify(lobbyAction));
     } catch (error) {
