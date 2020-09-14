@@ -276,6 +276,10 @@
                     "field": "link",
                     "seqType": "Sequelize.STRING"
                 },
+                "email": {
+                    "field": "email",
+                    "seqType": "Sequelize.STRING"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -290,5 +294,5 @@
             "indexes": []
         }
     },
-    "revision": 22
+    "revision": 23
 }
