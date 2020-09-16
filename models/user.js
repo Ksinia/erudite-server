@@ -17,6 +17,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
     },
     email: { type: DataTypes.STRING },
+    notifiedAt: {
+      type: DataTypes.DATE,
+      defaultValue: "2020-02-22 21:27:29.422+00",
+    },
   });
 
   User.associate = function (models) {

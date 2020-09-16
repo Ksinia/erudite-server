@@ -280,6 +280,13 @@
                     "field": "email",
                     "seqType": "Sequelize.STRING"
                 },
+                "notifiedAt": {
+                    "defaultValue": {
+                        "value": "2020-02-22 21:27:29.422+00"
+                    },
+                    "field": "notifiedAt",
+                    "seqType": "Sequelize.DATE"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -294,5 +301,5 @@
             "indexes": []
         }
     },
-    "revision": 23
+    "revision": 24
 }
