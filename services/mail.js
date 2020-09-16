@@ -43,12 +43,15 @@ const sendActiveGameNotifications = async () => {
   // включить игры в запрос,
   // но только те, где его ход и фаза ход или его ход следующий фаза валидация
   // для каждого пользователя отправить письмо со ссылками на игры
-  const date = new Date().setDate(new Date().getDate() - 1);
+  const dayAgo = new Date().setDate(new Date().getDate() - 1);
   try {
     const users = await User.findAll({
       where: {
         email: {
           [Sequelize.Op.ne]: null,
+        },
+        notifiedAt: {
+          [Sequelize.Op.lt]: dayAgo,
         },
       },
       attributes: ["id", "name", "email"],
@@ -60,7 +63,7 @@ const sendActiveGameNotifications = async () => {
           model: Game_User,
           where: {
             visit: {
-              [Sequelize.Op.lt]: date,
+              [Sequelize.Op.lt]: dayAgo,
             },
           },
         },
@@ -105,7 +108,7 @@ const sendActiveGameNotifications = async () => {
         },
       },
     });
-    users.forEach((user) => {
+    users.forEach(async (user) => {
       const filteredGames = user.games.filter((game) => {
         return (
           (game.phase === "turn" && game.turnOrder[game.turn] == user.id) ||
@@ -122,6 +125,9 @@ const sendActiveGameNotifications = async () => {
           .map((game) => `https://erudit.ksinia.net/game/${game.id}`)
           .join("\n")}`;
         mail(to, subject, text);
+        const now = new Date();
+        console.log(`${user.name} was notified at ${now.toLocaleString()}`);
+        user.update({ notifiedAt: now });
       }
     });
   } catch (error) {
