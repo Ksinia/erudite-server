@@ -113,7 +113,11 @@ const sendActiveGameNotifications = async () => {
         return (
           (game.phase === "turn" && game.turnOrder[game.turn] == user.id) ||
           (game.phase === "validation" &&
-            getNextTurnId(game.turn, game.turnOrder) == user.id)
+            getNextTurnId(game.turn, game.turnOrder) == user.id &&
+            game.validated !== "no") ||
+          (game.phase === "validation" &&
+            game.validated === "no" &&
+            game.turnOrder[game.turn] == user.id)
         );
       });
       if (filteredGames.length > 0) {
