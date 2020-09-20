@@ -21,11 +21,11 @@ const mail = (to, subject, text) => {
 
 sendFinishedGameNotifications = async (gameId) => {
   const users = await User.findAll({
-    through: {
-      model: Game_User,
-      where: {
-        gameId,
-      },
+    include: {
+      model: Game,
+      as: "games",
+      where: { id: gameId },
+      attributes: [],
     },
     attributes: ["id", "name", "email"],
   });
