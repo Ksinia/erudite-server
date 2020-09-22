@@ -20,22 +20,26 @@ const mail = (to, subject, text) => {
 };
 
 sendFinishedGameNotifications = async (gameId) => {
-  const users = await User.findAll({
-    include: {
-      model: Game,
-      as: "games",
-      where: { id: gameId },
-      attributes: [],
-    },
-    attributes: ["id", "name", "email"],
-  });
-  users.forEach((user) => {
-    if (user.email) {
-      const subject = `${user.name}, Erudite game ${gameId} is over!`;
-      const text = `${user.name}, Erudite game ${gameId} is over! Results: https://erudit.ksinia.net/game/${gameId}`;
-      mail(user.email, subject, text);
-    }
-  });
+  try {
+    const users = await User.findAll({
+      include: {
+        model: Game,
+        as: "games",
+        where: { id: gameId },
+        attributes: [],
+      },
+      attributes: ["id", "name", "email"],
+    });
+    users.forEach((user) => {
+      if (user.email) {
+        const subject = `${user.name}, Erudite game ${gameId} is over!`;
+        const text = `${user.name}, Erudite game ${gameId} is over! Results: https://erudit.ksinia.net/game/${gameId}`;
+        mail(user.email, subject, text);
+      }
+    });
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 const sendActiveGameNotifications = async () => {
@@ -75,16 +79,6 @@ const sendActiveGameNotifications = async () => {
                 {
                   phase: "turn",
                 },
-                // Sequelize.where(
-                //   Sequelize.fn(
-                //     "getTurnColumn",
-                //     Sequelize.col("turn"),
-                //     Sequelize.col("turnOrder")
-                //   ),
-                //   {
-                //     [Sequelize.Op.et]: user.id,
-                //   }
-                // ),
               ],
             },
             {
@@ -92,16 +86,6 @@ const sendActiveGameNotifications = async () => {
                 {
                   phase: "validation",
                 },
-                // Sequelize.where(
-                //   Sequelize.fn(
-                //     "getNextTurnColumn",
-                //     Sequelize.col("turn"),
-                //     Sequelize.col("turnOrder")
-                //   ),
-                //   {
-                //     [Sequelize.Op.et]: user.id,
-                //   }
-                // ),
               ],
             },
           ],
@@ -134,8 +118,8 @@ const sendActiveGameNotifications = async () => {
         user.update({ notifiedAt: now });
       }
     });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.error(err);
   }
 };
 
