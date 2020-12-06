@@ -97,29 +97,32 @@ router.post("/generate-link", async (req, res, next) => {
 router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
   const currentUser = req.user;
   try {
-    const gameIds = await Game.findAll({
+    const games = await Game.findAll({
       order: [["updatedAt", "DESC"]],
       where: {
         phase: "finished",
+        turnOrder: {
+          [Sequelize.Op.contains]: currentUser.id,
+        },
       },
-      attributes: ["id"],
-      raw: true,
+      attributes: [
+        "id",
+        "phase",
+        "turnOrder",
+        "language",
+        "maxPlayers",
+        "result",
+      ],
       include: [
         {
           model: User,
           as: "users",
-          attributes: ["id"],
+          attributes: ["id", "name"],
           raw: true,
-
-          where: {
-            id: {
-              [Sequelize.Op.eq]: currentUser.id,
-            },
-          },
         },
       ],
     });
-    res.send(gameIds.map((obj) => obj.id));
+    res.send(games);
   } catch (error) {
     next(error);
   }

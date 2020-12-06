@@ -34,7 +34,7 @@
                 },
                 "letters": {
                     "field": "letters",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "phase": {
                     "defaultValue": {
@@ -63,7 +63,7 @@
                 },
                 "turnOrder": {
                     "field": "turnOrder",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "turn": {
                     "defaultValue": {
@@ -81,15 +81,15 @@
                 },
                 "score": {
                     "field": "score",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "turns": {
                     "field": "turns",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "result": {
                     "field": "result",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "board": {
                     "defaultValue": {
@@ -97,7 +97,7 @@
                         "value": "Sequelize.Array"
                     },
                     "field": "board",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "previousBoard": {
                     "defaultValue": {
@@ -105,7 +105,7 @@
                         "value": "Sequelize.Array"
                     },
                     "field": "previousBoard",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "putLetters": {
                     "defaultValue": {
@@ -113,7 +113,7 @@
                         "value": "Sequelize.Array"
                     },
                     "field": "putLetters",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "previousLetters": {
                     "defaultValue": {
@@ -121,7 +121,7 @@
                         "value": "Sequelize.Array"
                     },
                     "field": "previousLetters",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "lettersChanged": {
                     "defaultValue": {
@@ -136,7 +136,7 @@
                         "value": "Sequelize.Array"
                     },
                     "field": "wordsForValidation",
-                    "seqType": "Sequelize.JSON"
+                    "seqType": "Sequelize.JSONB"
                 },
                 "createdAt": {
                     "allowNull": false,
@@ -301,5 +301,5 @@
             "indexes": []
         }
     },
-    "revision": 24
+    "revision": 25
 }
