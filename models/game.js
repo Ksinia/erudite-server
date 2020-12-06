@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: "ru",
     },
     letters: {
-      type: DataTypes.JSON,
+      type: DataTypes.JSONB,
     },
     phase: {
       type: DataTypes.ENUM(
@@ -27,32 +27,32 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM("unknown", "yes", "no"),
       defaultValue: "unknown",
     },
-    turnOrder: DataTypes.JSON,
+    turnOrder: DataTypes.JSONB,
     turn: { type: DataTypes.INTEGER, defaultValue: 0 },
     passedCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-    score: DataTypes.JSON,
-    turns: DataTypes.JSON,
-    result: DataTypes.JSON,
+    score: DataTypes.JSONB,
+    turns: DataTypes.JSONB,
+    result: DataTypes.JSONB,
     board: {
-      type: DataTypes.JSON,
+      type: DataTypes.JSONB,
       defaultValue: Array(15)
         .fill(null)
         .map(() => Array(15).fill(null)),
     },
     previousBoard: {
-      type: DataTypes.JSON,
+      type: DataTypes.JSONB,
       defaultValue: Array(15)
         .fill(null)
         .map(() => Array(15).fill(null)),
     },
-    putLetters: { type: DataTypes.JSON, defaultValue: [] },
-    previousLetters: { type: DataTypes.JSON, defaultValue: [] },
+    putLetters: { type: DataTypes.JSONB, defaultValue: [] },
+    previousLetters: { type: DataTypes.JSONB, defaultValue: [] },
     lettersChanged: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
     wordsForValidation: {
-      type: DataTypes.JSON,
+      type: DataTypes.JSONB,
       defaultValue: [],
     },
   });
