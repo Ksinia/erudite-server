@@ -128,4 +128,31 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
   }
 });
 
+router.get("/my/archived-games", authMiddleware, async (req, res, next) => {
+  const currentUser = req.user;
+  try {
+    const games = await Game.findAll({
+      order: [["updatedAt", "DESC"]],
+      where: {
+        archived: true,
+        turnOrder: {
+          [Sequelize.Op.contains]: currentUser.id,
+        },
+      },
+      attributes: ["id", "phase", "turnOrder", "language", "maxPlayers"],
+      include: [
+        {
+          model: User,
+          as: "users",
+          attributes: ["id", "name"],
+          raw: true,
+        },
+      ],
+    });
+    res.send(games);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
