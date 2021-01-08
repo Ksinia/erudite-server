@@ -139,7 +139,14 @@ router.get("/my/archived-games", authMiddleware, async (req, res, next) => {
           [Sequelize.Op.contains]: currentUser.id,
         },
       },
-      attributes: ["id", "phase", "turnOrder", "language", "maxPlayers"],
+      attributes: [
+        "id",
+        "phase",
+        "turnOrder",
+        "language",
+        "maxPlayers",
+        "turn",
+      ],
       include: [
         {
           model: User,
