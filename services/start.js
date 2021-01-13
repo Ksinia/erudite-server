@@ -41,6 +41,7 @@ module.exports = async (gameId) => {
     turns: [],
     result: {},
     phase: "turn",
+    activeUser: turnOrder[0],
   });
   return game;
 };

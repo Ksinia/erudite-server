@@ -21,7 +21,6 @@ module.exports = async (currentUserId, gameId) => {
           ...game.letters,
           [currentUserId]: game.previousLetters,
         },
-        // putLetters: [],
         previousLetters: [],
       });
     } else {

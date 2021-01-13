@@ -72,6 +72,10 @@
                     "field": "turn",
                     "seqType": "Sequelize.INTEGER"
                 },
+                "activeUserId": {
+                    "field": "activeUserId",
+                    "seqType": "Sequelize.INTEGER"
+                },
                 "passedCount": {
                     "defaultValue": {
                         "value": 0
@@ -301,5 +305,5 @@
             "indexes": []
         }
     },
-    "revision": 25
+    "revision": 26
 }
