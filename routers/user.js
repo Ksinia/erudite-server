@@ -146,6 +146,7 @@ router.get("/my/archived-games", authMiddleware, async (req, res, next) => {
         "language",
         "maxPlayers",
         "turn",
+        "activeUserId",
       ],
       include: [
         {
@@ -156,7 +157,14 @@ router.get("/my/archived-games", authMiddleware, async (req, res, next) => {
         },
       ],
     });
-    res.send(games);
+    const sortedGames = games.sort((a, b) => {
+      if (b.activeUserId === currentUser.id) {
+        return 1;
+      } else {
+        return -1;
+      }
+    });
+    res.send(sortedGames);
   } catch (error) {
     next(error);
   }

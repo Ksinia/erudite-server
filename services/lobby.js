@@ -34,6 +34,7 @@ const getUpdatedGameForLobby = (game) => {
     language,
     maxPlayers,
     users,
+    activeUserId,
   } = game;
   const lobbyGame = {
     id,
@@ -44,6 +45,7 @@ const getUpdatedGameForLobby = (game) => {
     language,
     maxPlayers,
     users,
+    activeUserId,
   };
   return {
     type: "UPDATED_GAME_IN_LOBBY",
