@@ -43,6 +43,7 @@ module.exports = async (currentUserId, gameId, validation) => {
       await updateGame(game, {
         phase: "turn",
         turn: newTurn,
+        activeUserId: game.turnOrder[newTurn],
         letters: updatedGameLetters,
         putLetters: [],
         previousLetters: [],
@@ -55,6 +56,7 @@ module.exports = async (currentUserId, gameId, validation) => {
     } else if (validation === "no") {
       await updateGame(game, {
         validated: "no",
+        activeUserId: game.turnOrder[game.turn],
       });
     }
   }

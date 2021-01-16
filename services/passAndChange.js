@@ -31,6 +31,7 @@ module.exports = async (currentUserId, gameId, lettersToChange) => {
       previousBoard: game.board,
       phase: "turn",
       turn: getNextTurn(game),
+      activeUserId: game.turnOrder[getNextTurn(game)],
       letters: {
         ...game.letters,
         pot: updatedPot,

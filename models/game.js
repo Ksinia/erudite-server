@@ -29,6 +29,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     turnOrder: DataTypes.JSONB,
     turn: { type: DataTypes.INTEGER, defaultValue: 0 },
+    activeUserId: { type: DataTypes.INTEGER },
     passedCount: { type: DataTypes.INTEGER, defaultValue: 0 },
     score: DataTypes.JSONB,
     turns: DataTypes.JSONB,

@@ -36,12 +36,15 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
               changedLetters: false,
             },
           ],
+          activeUserId: null,
         });
       } else {
+        const newTurn = getNextTurn(game);
         await updateGame(game, {
           previousBoard: game.board,
           phase: "turn",
-          turn: getNextTurn(game),
+          turn: newTurn,
+          activeUserId: game.turnOrder[newTurn],
           passedCount: newPassedQty,
           validated: "unknown",
           turns: [
@@ -181,6 +184,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
               validated: "unknown",
               lettersChanged: false,
               wordsForValidation: words,
+              activeUserId: game.turnOrder[getNextTurn(game)],
             });
           }
         }

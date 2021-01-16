@@ -157,6 +157,7 @@ app.get("/stream", async (req, res, next) => {
         "validated",
         "language",
         "maxPlayers",
+        "activeUserId",
       ],
       where: {
         phase: {
