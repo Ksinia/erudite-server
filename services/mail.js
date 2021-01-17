@@ -45,7 +45,7 @@ sendFinishedGameNotifications = async (gameId) => {
 const sendActiveGameNotifications = async () => {
   // взять людей, у которых есть незаконченные и незаархивированные игры и у которых есть email
   // включить игры в запрос,
-  // но только те, где его ход и фаза ход или его ход следующий фаза валидация
+  // но только те, где данный пользователь активный сейчас
   // для каждого пользователя отправить письмо со ссылками на игры
   const dayAgo = new Date().setDate(new Date().getDate() - 1);
   try {
@@ -62,7 +62,7 @@ const sendActiveGameNotifications = async () => {
       include: {
         model: Game,
         as: "games",
-        attributes: ["id", "turn", "turnOrder", "phase"],
+        attributes: ["id", "activeUserId", "phase"],
         through: {
           model: Game_User,
           where: {
@@ -93,17 +93,9 @@ const sendActiveGameNotifications = async () => {
       },
     });
     users.forEach(async (user) => {
-      const filteredGames = user.games.filter((game) => {
-        return (
-          (game.phase === "turn" && game.turnOrder[game.turn] == user.id) ||
-          (game.phase === "validation" &&
-            getNextTurnId(game.turn, game.turnOrder) == user.id &&
-            game.validated !== "no") ||
-          (game.phase === "validation" &&
-            game.validated === "no" &&
-            game.turnOrder[game.turn] == user.id)
-        );
-      });
+      const filteredGames = user.games.filter(
+        (game) => game.activeUserId === user.id
+      );
       if (filteredGames.length > 0) {
         const to = user.email;
         const subject = `${user.name}, Erudite games are waiting for your action!`;
@@ -121,10 +113,6 @@ const sendActiveGameNotifications = async () => {
   } catch (err) {
     console.error(err);
   }
-};
-
-const getNextTurnId = (turn, turnOrder) => {
-  return turnOrder[(turn + 1) % turnOrder.length];
 };
 
 module.exports = {
