@@ -1,3 +1,6 @@
+const dotenv = require("dotenv");
+dotenv.config();
+
 // for links to the games in the emails
 const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
 // for CORS in socket.io
