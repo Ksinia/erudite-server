@@ -13,10 +13,10 @@ const { sendActiveGameNotifications } = require("./services/mail");
 
 const app = express();
 const http = require("http").createServer(app);
-const io = require("socket.io")(http, {
+const webSocketsServer = require("socket.io")(http, {
   path: "/chat",
 });
-const lobbyIo = require("socket.io")(http, {
+const lobbySocketServer = require("socket.io")(http, {
   path: "/lobby",
 });
 const port = process.env.PORT || 4000;
@@ -41,7 +41,7 @@ app.get("/", (_, res) => {
   res.send("Hello"); //we need res.send to avoid timed out error
 });
 
-io.on("connection", async (socket) => {
+webSocketsServer.on("connection", async (socket) => {
   const { jwt, gameId } = socket.handshake.query;
   const data = toData(jwt);
   try {
@@ -59,23 +59,24 @@ io.on("connection", async (socket) => {
 
     if (user) {
       socket.on("message", (message) => {
-        io.to(Object.keys(socket.rooms)[0]).send({
+        webSocketsServer.to(Object.keys(socket.rooms)[0]).send({
           type: "NEW_MESSAGE",
           payload: { userId: socket.playerId, text: message, name: user.name },
         });
-        const newMessage = Message.create({
+        // store the message in DB
+        Message.create({
           text: message,
           name: user.name,
           GameId: gameId,
           UserId: socket.playerId,
         });
       });
-      const v = await Game_User.findOne({
+      const gameUserEntry = await Game_User.findOne({
         where: { GameId: gameId, UserId: user.id },
       });
-      if (v) {
-        v.visit = new Date();
-        v.save();
+      if (gameUserEntry) {
+        gameUserEntry.visit = new Date();
+        gameUserEntry.save();
       }
 
       socket.on("disconnect", () => {});
@@ -84,7 +85,7 @@ io.on("connection", async (socket) => {
     console.log(error);
   }
 });
-lobbyIo.on("connection", async (socket) => {
+lobbySocketServer.on("connection", async (socket) => {
   const { jwt } = socket.handshake.query;
   const data = toData(jwt);
   try {
