@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const Sse = require("json-sse");
 
+const { serverPort } = require("./constants/runtime");
 const { Sequelize, User, Game, Message, Game_User } = require("./models");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
@@ -10,16 +11,18 @@ const gameRouterFactory = require("./routers/game");
 const { archivateOldGames } = require("./services/lobby.js");
 const { toData } = require("./auth/jwt");
 const { sendActiveGameNotifications } = require("./services/mail");
+const { originUrls } = require("./constants/runtime");
 
 const app = express();
 const http = require("http").createServer(app);
 const webSocketsServer = require("socket.io")(http, {
   path: "/chat",
+  origins: originUrls,
 });
 const lobbySocketServer = require("socket.io")(http, {
   path: "/lobby",
+  origins: originUrls,
 });
-const port = process.env.PORT || 4000;
 
 const bodyParserMiddleware = bodyParser.json();
 const corsMiddleware = cors();
@@ -187,7 +190,7 @@ app.get("/stream", async (req, res, next) => {
   }
 });
 
-http.listen(port, () => console.log(`Listening on port: ${port}`));
+http.listen(serverPort, () => console.log(`Listening on port: ${serverPort}`));
 archivateOldGames();
 setInterval(archivateOldGames, 1000 * 60 * 60 * 24);
 sendActiveGameNotifications();
