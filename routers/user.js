@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");
 const { toJWT } = require("../auth/jwt");
+const { clientUrl } = require("../constants/runtime");
 
 const router = new Router();
 
@@ -82,8 +83,7 @@ router.post("/generate-link", async (req, res, next) => {
         return;
       } else {
         const shortTermJwt = toJWT({ userId: currentUser.id }, true);
-        const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
-        const link = `${baseUrl}/user?jwt=${shortTermJwt}`;
+        const link = `${clientUrl}/user?jwt=${shortTermJwt}`;
         // TODO: send link by email
         await currentUser.update({ link });
         res.send("Link generated");
