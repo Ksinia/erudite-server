@@ -46,48 +46,87 @@ app.get("/", (_, res) => {
 
 webSocketsServer.on("connection", async (socket) => {
   const { jwt, gameId } = socket.handshake.query;
-  const data = toData(jwt);
-  try {
-    const user = await User.findByPk(data.userId, {
-      attributes: ["id", "name"],
-    });
-    socket.playerId = user.id || -1;
-    const allMessages = await Message.findAll({
-      where: { GameId: gameId },
-      order: [["updatedAt", "DESC"]],
-    });
-    socket.send({ type: "ALL_MESSAGES", payload: allMessages });
-
-    socket.join(gameId);
-
+  socket.join(gameId);
+  socket.playerId = -1;
+  if (jwt) {
+    const data = toData(jwt);
+    let user = undefined;
+    try {
+      user = await User.findByPk(data.userId, {
+        attributes: ["id", "name"],
+      });
+    } catch (error) {
+      console.log("problem retrieving user:", error);
+    }
     if (user) {
+      socket.playerId = user.id;
       socket.on("message", (message) => {
         webSocketsServer.to(Object.keys(socket.rooms)[0]).send({
           type: "NEW_MESSAGE",
-          payload: { userId: socket.playerId, text: message, name: user.name },
+          payload: {
+            userId: socket.playerId,
+            text: message,
+            name: user.name,
+          },
         });
         // store the message in DB
-        Message.create({
-          text: message,
-          name: user.name,
-          GameId: gameId,
-          UserId: socket.playerId,
+        try {
+          Message.create({
+            text: message,
+            name: user.name,
+            GameId: gameId,
+            UserId: socket.playerId,
+          });
+        } catch (error) {
+          console.log("problem storing chat message:", error);
+        }
+      });
+      try {
+        const gameUserEntry = await Game_User.findOne({
+          where: { GameId: gameId, UserId: user.id },
         });
-      });
-      const gameUserEntry = await Game_User.findOne({
-        where: { GameId: gameId, UserId: user.id },
-      });
-      if (gameUserEntry) {
-        gameUserEntry.visit = new Date();
-        gameUserEntry.save();
+        if (gameUserEntry) {
+          gameUserEntry.visit = new Date();
+          gameUserEntry.save();
+        }
+      } catch (error) {
+        console.log("problem updating game visit:", error);
       }
-
-      socket.on("disconnect", () => {});
+    }
+  }
+  try {
+    const allMessages = await Message.findAll({
+      where: {
+        GameId: gameId,
+      },
+      include: {
+        model: Game,
+        as: "Game",
+        where: {
+          [Sequelize.Op.or]: [
+            {
+              turnOrder: {
+                [Sequelize.Op.contains]: socket.playerId,
+              },
+            },
+            {
+              phase: "waiting",
+            },
+          ],
+        },
+        attributes: [],
+      },
+      order: [["updatedAt", "DESC"]],
+    });
+    if (allMessages.length > 0) {
+      socket.send({ type: "ALL_MESSAGES", payload: allMessages });
     }
   } catch (error) {
     console.log(error);
   }
+  socket.on("disconnect", () => {});
 });
+
 lobbySocketServer.on("connection", async (socket) => {
   const { jwt } = socket.handshake.query;
   const data = toData(jwt);
