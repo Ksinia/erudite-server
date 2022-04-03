@@ -12,6 +12,7 @@ const { archivateOldGames } = require("./services/lobby.js");
 const { toData } = require("./auth/jwt");
 const { sendActiveGameNotifications } = require("./services/mail");
 const { originUrls } = require("./constants/runtime");
+const { addPlayerClient, removePlayerClient } = require("./socketClients");
 
 const app = express();
 const http = require("http").createServer(app);
@@ -60,6 +61,7 @@ webSocketsServer.on("connection", async (socket) => {
     }
     if (user) {
       socket.playerId = user.id;
+      addPlayerClient(socket);
       socket.on("message", (message) => {
         webSocketsServer.to(Object.keys(socket.rooms)[0]).send({
           type: "NEW_MESSAGE",
@@ -124,7 +126,9 @@ webSocketsServer.on("connection", async (socket) => {
   } catch (error) {
     console.log(error);
   }
-  socket.on("disconnect", () => {});
+  socket.on("disconnect", () => {
+    removePlayerClient(socket);
+  });
 });
 
 lobbySocketServer.on("connection", async (socket) => {
