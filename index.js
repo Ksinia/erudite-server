@@ -4,7 +4,7 @@ const cors = require("cors");
 const Sse = require("json-sse");
 
 const { serverPort } = require("./constants/runtime");
-const { Sequelize, User, Game, Message, Game_User } = require("./models");
+const { Sequelize, User, Game } = require("./models");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
@@ -13,15 +13,17 @@ const { toData } = require("./auth/jwt");
 const { sendActiveGameNotifications } = require("./services/mail");
 const { originUrls } = require("./constants/runtime");
 const { addPlayerClient, removePlayerClient } = require("./socketClients");
+const handlers = require("./handlers");
+const registerVisit = require("./services/visit");
+const {
+  getAllMessagesInGame,
+  countAllMessagesInLobby,
+} = require("./services/chat");
 
 const app = express();
 const http = require("http").createServer(app);
 const webSocketsServer = require("socket.io")(http, {
-  path: "/chat",
-  origins: originUrls,
-});
-const lobbySocketServer = require("socket.io")(http, {
-  path: "/lobby",
+  path: "/socket",
   origins: originUrls,
 });
 
@@ -47,7 +49,9 @@ app.get("/", (_, res) => {
 
 webSocketsServer.on("connection", async (socket) => {
   const { jwt, gameId } = socket.handshake.query;
-  socket.join(gameId);
+  if (gameId) {
+    socket.join(gameId);
+  }
   socket.playerId = -1;
   if (jwt) {
     const data = toData(jwt);
@@ -61,136 +65,35 @@ webSocketsServer.on("connection", async (socket) => {
     }
     if (user) {
       socket.playerId = user.id;
+      socket.user = user;
       addPlayerClient(socket);
-      socket.on("message", (message) => {
-        webSocketsServer.to(Object.keys(socket.rooms)[0]).send({
-          type: "NEW_MESSAGE",
-          payload: {
-            userId: socket.playerId,
-            text: message,
-            name: user.name,
-          },
-        });
-        // store the message in DB
-        try {
-          Message.create({
-            text: message,
-            name: user.name,
-            GameId: gameId,
-            UserId: socket.playerId,
-          });
-        } catch (error) {
-          console.log("problem storing chat message:", error);
-        }
-      });
       try {
-        const gameUserEntry = await Game_User.findOne({
-          where: { GameId: gameId, UserId: user.id },
-        });
-        if (gameUserEntry) {
-          gameUserEntry.visit = new Date();
-          gameUserEntry.save();
-        }
+        await registerVisit(gameId, user.id);
       } catch (error) {
         console.log("problem updating game visit:", error);
       }
+      socket.on("message", (message) => {
+        handlers[message.type](webSocketsServer, socket, message.payload);
+      });
+      if (!gameId) {
+        const count = await countAllMessagesInLobby(user.id);
+        socket.send({ type: "MESSAGES_COUNT", payload: count });
+      }
     }
   }
-  try {
-    const allMessages = await Message.findAll({
-      where: {
-        GameId: gameId,
-      },
-      include: {
-        model: Game,
-        as: "Game",
-        where: {
-          [Sequelize.Op.or]: [
-            {
-              turnOrder: {
-                [Sequelize.Op.contains]: socket.playerId,
-              },
-            },
-            {
-              phase: "waiting",
-            },
-          ],
-        },
-        attributes: [],
-      },
-      order: [["updatedAt", "DESC"]],
-    });
-    if (allMessages.length > 0) {
-      socket.send({ type: "ALL_MESSAGES", payload: allMessages });
+  if (gameId) {
+    try {
+      const allMessages = await getAllMessagesInGame(gameId, socket.playerId);
+      if (allMessages.length > 0) {
+        socket.send({ type: "ALL_MESSAGES", payload: allMessages });
+      }
+    } catch (error) {
+      console.log(error);
     }
-  } catch (error) {
-    console.log(error);
   }
   socket.on("disconnect", () => {
     removePlayerClient(socket);
   });
-});
-
-lobbySocketServer.on("connection", async (socket) => {
-  const { jwt } = socket.handshake.query;
-  const data = toData(jwt);
-  try {
-    const user = await User.findByPk(data.userId, {
-      benchmark: true,
-      logging: console.log,
-      attributes: ["id"],
-    });
-
-    socket.playerId = user.id || -1;
-
-    const messagesCountList = await Game.findAll({
-      benchmark: true,
-      logging: console.log,
-      attributes: ["id", [Sequelize.fn("COUNT", "*"), "messagesCount"]],
-      include: [
-        {
-          model: User,
-          attributes: [],
-          as: "users",
-          through: Game_User,
-          where: { id: user.id },
-        },
-        {
-          model: Message,
-          as: "messages",
-          attributes: [],
-          where: {
-            createdAt: {
-              [Sequelize.Op.gt]: Sequelize.col("users->Game_User.visit"),
-            },
-            UserId: { [Sequelize.Op.not]: user.id },
-          },
-        },
-      ],
-      where: {
-        phase: {
-          [Sequelize.Op.not]: "finished",
-        },
-        archived: "FALSE",
-      },
-      group: [
-        "Game.id",
-        "users->Game_User.visit",
-        "users->Game_User.createdAt",
-        "users->Game_User.updatedAt",
-        "users->Game_User.GameId",
-        "users->Game_User.UserId",
-      ],
-    });
-
-    const count = messagesCountList.reduce((acc, el) => {
-      acc[el.dataValues.id] = parseInt(el.dataValues.messagesCount);
-      return acc;
-    }, {});
-    socket.send({ type: "MESSAGES_COUNT", payload: count });
-  } catch (error) {
-    console.log(error);
-  }
 });
 
 app.get("/stream", async (req, res, next) => {
