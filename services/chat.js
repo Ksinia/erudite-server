@@ -15,7 +15,7 @@ const getAllMessagesInGame = async (gameId, playerId) => {
             },
           },
           {
-            phase: "waiting",
+            phase: ["waiting", "ready"],
           },
         ],
       },
