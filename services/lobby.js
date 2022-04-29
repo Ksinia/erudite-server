@@ -1,5 +1,5 @@
-const { Game, Sequelize } = require("../models");
-
+const { Game, Sequelize, User } = require("../models");
+const { UPDATED_GAME_IN_LOBBY } = require("../constants/outgoingMessageTypes");
 const archivateOldGames = async () => {
   const date = new Date().setDate(new Date().getDate() - 7);
   const games = await Game.findAll({
@@ -14,7 +14,6 @@ const archivateOldGames = async () => {
       },
     },
   });
-  games.map((el) => console.log(el.dataValues));
   if (games.length > 0) {
     Promise.all(games.map(async (el) => await el.update({ archived: true })));
   }
@@ -48,9 +47,37 @@ const getUpdatedGameForLobby = (game) => {
     activeUserId,
   };
   return {
-    type: "UPDATED_GAME_IN_LOBBY",
+    type: UPDATED_GAME_IN_LOBBY,
     payload: lobbyGame,
   };
 };
 
-module.exports = { archivateOldGames, getUpdatedGameForLobby };
+const fetchGames = () => {
+  return Game.findAll({
+    attributes: [
+      "id",
+      "phase",
+      "turnOrder",
+      "turn",
+      "validated",
+      "language",
+      "maxPlayers",
+      "activeUserId",
+    ],
+    where: {
+      phase: {
+        [Sequelize.Op.not]: "finished",
+      },
+      archived: false,
+    },
+    include: [
+      {
+        model: User,
+        as: "users",
+        attributes: ["id", "name"],
+      },
+    ],
+  });
+};
+
+module.exports = { archivateOldGames, getUpdatedGameForLobby, fetchGames };

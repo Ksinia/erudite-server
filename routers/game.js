@@ -10,8 +10,14 @@ const undoTurn = require("../services/undo");
 const passAndChange = require("../services/passAndChange");
 const fetchGame = require("../services/fetchGame");
 const { sendFinishedGameNotifications } = require("../services/mail");
+const {
+  GAME_UPDATED,
+  DUPLICATED_WORDS,
+  NO_DUPLICATIONS,
+  DELETE_GAME_IN_LOBBY,
+} = require("../constants/outgoingMessageTypes");
 
-function factory(gameStream, lobbyStream) {
+function factory(webSocketsServer) {
   const router = new Router();
 
   router.post("/create", authMiddleware, async (req, res, next) => {
@@ -25,7 +31,7 @@ function factory(gameStream, lobbyStream) {
         language
       );
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
       res.send(lobbyAction.payload);
     } catch (error) {
       next(error);
@@ -38,12 +44,12 @@ function factory(gameStream, lobbyStream) {
     try {
       const updatedGame = await joinGame(currentUser, gameId);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
       const updatedGameAction = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: { gameId: updatedGame.id, game: updatedGame },
       };
-      gameStream.send(JSON.stringify(updatedGameAction));
+      webSocketsServer.to(gameId).send(updatedGameAction);
       res.send(updatedGameAction);
     } catch (error) {
       next(error);
@@ -55,14 +61,14 @@ function factory(gameStream, lobbyStream) {
     try {
       const updatedGame = await startGame(gameId);
       const updatedGameAction = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: { gameId, game: updatedGame },
       };
-      gameStream.send(JSON.stringify(updatedGameAction));
-      // this response is important
-      res.send(updatedGameAction.payload.game);
+      webSocketsServer.to(gameId).send(updatedGameAction);
+      // TODO: why was this response important?
+      // res.send(updatedGameAction.payload.game);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
     } catch (error) {
       nxt(error);
     }
@@ -73,11 +79,10 @@ function factory(gameStream, lobbyStream) {
     try {
       const game = await fetchGame(gameId);
       const action = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: { gameId, game },
       };
-      gameStream.init(req, res);
-      gameStream.send(JSON.stringify(action));
+      res.send(action);
     } catch (error) {
       next(error);
     }
@@ -97,31 +102,31 @@ function factory(gameStream, lobbyStream) {
         wildCardOnBoard
       );
 
-      if (updatedGame.type === "DUPLICATED_WORDS") {
+      if (updatedGame.type === DUPLICATED_WORDS) {
         res.send(updatedGame);
         return;
       }
 
       const responseAction = {
-        type: "NO_DUPLICATIONS",
+        type: NO_DUPLICATIONS,
       };
       res.send(responseAction);
 
       const streamAction = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: { gameId, game: updatedGame },
       };
-      gameStream.send(JSON.stringify(streamAction));
+      webSocketsServer.to(gameId).send(streamAction);
 
       let lobbyAction = getUpdatedGameForLobby(updatedGame);
       if (updatedGame.phase === "finished") {
         lobbyAction = {
-          type: "DELETE_GAME_IN_LOBBY",
+          type: DELETE_GAME_IN_LOBBY,
           payload: gameId,
         };
         sendFinishedGameNotifications(gameId);
       }
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
     } catch (error) {
       next(error);
     }
@@ -134,17 +139,17 @@ function factory(gameStream, lobbyStream) {
     const validation = req.body.validation;
     try {
       const updatedGame = await validateTurn(currentUserId, gameId, validation);
-      res.send(updatedGame.id);
       const action = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: {
           gameId,
           game: updatedGame,
         },
       };
-      gameStream.send(JSON.stringify(action));
+      webSocketsServer.to(gameId).send(action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
+      res.sendStatus(204);
     } catch (error) {
       next(error);
     }
@@ -156,17 +161,17 @@ function factory(gameStream, lobbyStream) {
     const gameId = parseInt(req.params.id);
     try {
       const updatedGame = await undoTurn(currentUserId, gameId);
-      res.send(updatedGame.id);
       const action = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: {
           gameId,
           game: updatedGame,
         },
       };
-      gameStream.send(JSON.stringify(action));
+      webSocketsServer.to(gameId).send(action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
+      res.sendStatus(204);
     } catch (error) {
       next(error);
     }
@@ -183,17 +188,17 @@ function factory(gameStream, lobbyStream) {
         gameId,
         lettersToChange
       );
-      res.send(updatedGame.id);
       const action = {
-        type: "GAME_UPDATED",
+        type: GAME_UPDATED,
         payload: {
           gameId,
           game: updatedGame,
         },
       };
-      gameStream.send(JSON.stringify(action));
+      webSocketsServer.to(gameId).send(action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      lobbyStream.send(JSON.stringify(lobbyAction));
+      webSocketsServer.to("lobby").send(lobbyAction);
+      res.sendStatus(204);
     } catch (error) {
       next(error);
     }

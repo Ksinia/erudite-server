@@ -2,6 +2,7 @@ const { Game } = require("../models");
 const { getWords, substract, getNextTurn, getResult } = require("./game");
 const fetchGame = require("./fetchGame");
 const updateGame = require("./updateGame");
+const { DUPLICATED_WORDS } = require("../constants/outgoingMessageTypes");
 
 /**
  * Makes turn and returns updated game
@@ -148,7 +149,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
           });
           if (duplicatedWords && duplicatedWords.length > 0) {
             return {
-              type: "DUPLICATED_WORDS",
+              type: DUPLICATED_WORDS,
               payload: duplicatedWords,
             };
           } else {

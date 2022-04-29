@@ -3,6 +3,7 @@ const { toJWT } = require("./jwt");
 const { User } = require("../models");
 const bcrypt = require("bcrypt");
 const authMiddleware = require("../auth/middleware");
+const { LOGIN_SUCCESS } = require("../constants/outgoingMessageTypes");
 
 async function login(res, next, name = null, password = null) {
   if (!name || !password) {
@@ -24,7 +25,7 @@ async function login(res, next, name = null, password = null) {
         // 3. if the password is correct, return a JWT with the userId of the user (user.id)
         const jwt = toJWT({ userId: currentUser.id });
         const action = {
-          type: "LOGIN_SUCCESS",
+          type: LOGIN_SUCCESS,
           payload: {
             id: currentUser.id,
             name: currentUser.name,
@@ -56,7 +57,7 @@ router.get("/profile", authMiddleware, async (req, res) => {
   const currentUser = req.user;
   const jwt = req.headers.authorization.split(" ")[1];
   const action = {
-    type: "LOGIN_SUCCESS",
+    type: LOGIN_SUCCESS,
     payload: {
       id: currentUser.id,
       name: currentUser.name,

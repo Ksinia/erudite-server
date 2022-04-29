@@ -1,10 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const Sse = require("json-sse");
 
 const { serverPort } = require("./constants/runtime");
-const { Sequelize, User, Game } = require("./models");
 const signupRouter = require("./routers/user");
 const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
@@ -27,23 +25,13 @@ const corsMiddleware = cors();
 app.use(corsMiddleware);
 app.use(bodyParserMiddleware);
 
-const lobbyStream = new Sse();
-const gameStream = new Sse();
-
-const gameRouter = gameRouterFactory(gameStream, lobbyStream);
+const gameRouter = gameRouterFactory(webSocketsServer);
 
 app.use(signupRouter);
 app.use(loginRouter);
 app.use(gameRouter);
 
-app.get("/", (_, res) => {
-  lobbyStream.send("test");
-  res.send("Hello"); //we need res.send to avoid timed out error
-});
-
 webSocketsServer.on("connection", async (socket) => {
-  // TODO: send message about created socket
-  // socket.send({ type: "SOCKET_CONNECTED" });
   socket.playerId = -1;
   socket.on("message", (message) => {
     console.log("Handler:", message.type);
@@ -52,47 +40,6 @@ webSocketsServer.on("connection", async (socket) => {
   socket.on("disconnect", () => {
     removePlayerClient(socket);
   });
-});
-
-app.get("/stream", async (req, res, next) => {
-  try {
-    let games = await Game.findAll({
-      attributes: [
-        "id",
-        "phase",
-        "turnOrder",
-        "turn",
-        "validated",
-        "language",
-        "maxPlayers",
-        "activeUserId",
-      ],
-      where: {
-        phase: {
-          [Sequelize.Op.not]: "finished",
-        },
-        archived: false,
-      },
-      include: [
-        {
-          model: User,
-          as: "users",
-          attributes: ["id", "name"],
-        },
-      ],
-    });
-
-    const action = {
-      type: "ALL_GAMES",
-      payload: games,
-    };
-    const string = JSON.stringify(action);
-    lobbyStream.updateInit(string); //will send initial data to all clients
-    lobbyStream.init(req, res);
-  } catch (error) {
-    next(error);
-    // TODO: check why error is visible in browser
-  }
 });
 
 http.listen(serverPort, () => console.log(`Listening on port: ${serverPort}`));
