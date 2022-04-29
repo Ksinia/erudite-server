@@ -17,3 +17,8 @@ This project was created using Express.js server and Sequelize ORM.
 - Run `npm install`.
 - Connect to a local database (configuration is in the file `/config/config.json`).
 - Start the server with `npm run start` for production or `npm run dev` for development.
+
+## Technologies used
+
+- express
+- web sockets
