@@ -34,7 +34,6 @@ app.use(gameRouter);
 webSocketsServer.on("connection", async (socket) => {
   socket.playerId = -1;
   socket.on("message", (message) => {
-    console.log("Handler:", message.type);
     handlers[message.type](webSocketsServer, socket, message.payload);
   });
   socket.on("disconnect", () => {

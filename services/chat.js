@@ -1,4 +1,8 @@
 const { Message, Game, Sequelize, User, Game_User } = require("../models");
+/**
+ * Show messages from waiting and ready games to everyone and from games with other
+ * statuses only to participating players
+ */
 const getAllMessagesInGame = async (gameId, playerId) => {
   return Message.findAll({
     where: {
