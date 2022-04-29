@@ -65,10 +65,9 @@ function factory(webSocketsServer) {
         payload: { gameId, game: updatedGame },
       };
       webSocketsServer.to(gameId).send(updatedGameAction);
-      // TODO: why was this response important?
-      // res.send(updatedGameAction.payload.game);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
       webSocketsServer.to("lobby").send(lobbyAction);
+      res.sendStatus(204);
     } catch (error) {
       nxt(error);
     }
