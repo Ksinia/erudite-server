@@ -45,7 +45,6 @@ const sendFinishedGameNotifications = async (gameId) => {
           type: PUSH_NOTIFICATION,
           payload: {
             title: `${user.name}, Erudite game ${gameId} is over!`,
-            message: `${user.name}, Erudite game ${gameId} is over! Results: https://erudit.ksinia.net/game/${gameId}`,
             gameId,
           },
         })
