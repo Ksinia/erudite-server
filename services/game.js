@@ -1,4 +1,6 @@
 const { wordBonuses, letterBonuses } = require("../constants/bonuses");
+const { getClientsByPlayerId } = require("../socketClients");
+const { PUSH_NOTIFICATION } = require("../constants/outgoingMessageTypes");
 
 const shuffle = (arr) => {
   return arr.sort(() => Math.random() - 0.5);
@@ -328,6 +330,32 @@ const getHorizontalOrVerticalTurn = (
   );
 };
 
+const sendTurnNotification = (playerId, gameId) => {
+  getClientsByPlayerId(playerId).forEach((socket) =>
+    socket.send({
+      type: PUSH_NOTIFICATION,
+      payload: {
+        title: `Your turn in game ${gameId}!`,
+        message: `Your turn in game ${gameId}!`,
+        gameId,
+      },
+    })
+  );
+};
+
+const sendDisapproveNotification = (playerId, gameId) => {
+  getClientsByPlayerId(playerId).forEach((socket) =>
+    socket.send({
+      type: PUSH_NOTIFICATION,
+      payload: {
+        title: `Your turn in game ${gameId} was not approved`,
+        message: `Please undo your turn and try again`,
+        gameId,
+      },
+    })
+  );
+};
+
 module.exports = {
   shuffle,
   getNextTurn,
@@ -339,4 +367,6 @@ module.exports = {
   giveLetters,
   getResult,
   getWords,
+  sendTurnNotification,
+  sendDisapproveNotification,
 };

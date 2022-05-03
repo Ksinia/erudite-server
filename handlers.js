@@ -17,6 +17,7 @@ const {
   ALL_MESSAGES,
   ALL_GAMES,
   GAME_UPDATED,
+  PUSH_NOTIFICATION,
 } = require("./constants/outgoingMessageTypes");
 const fetchGame = require("./services/fetchGame");
 
@@ -33,17 +34,17 @@ const receiveSaveAndSendNewMessage = async (
       GameId: socket.gameId,
       UserId: socket.user.id,
     });
+    webSocketsServer.to(socket.gameId).send({
+      type: NEW_MESSAGE,
+      payload: {
+        userId: socket.playerId,
+        text: payload,
+        name: socket.user.name,
+      },
+    });
   } catch (error) {
-    console.log("problem storing chat message:", error);
+    console.log("problem storing and sending chat message:", error);
   }
-  webSocketsServer.to(socket.gameId).send({
-    type: NEW_MESSAGE,
-    payload: {
-      userId: socket.playerId,
-      text: payload,
-      name: socket.user.name,
-    },
-  });
   try {
     const usersOfThisGame = await User.findAll({
       include: {
@@ -56,16 +57,29 @@ const receiveSaveAndSendNewMessage = async (
     });
     await Promise.all(
       usersOfThisGame.map(async (user) => {
-        await Promise.all(
-          getClientsByPlayerId(user.id)
-            .filter((client) => !client.gameId)
-            .map(async (client) => {
-              client.send({
-                type: MESSAGES_COUNT,
-                payload: await countAllMessagesInLobby(user.id),
-              });
-            })
-        );
+        const clients = await Promise.all(getClientsByPlayerId(user.id));
+        clients
+          .filter((client) => !client.gameId)
+          .map(async (client) => {
+            client.send({
+              type: MESSAGES_COUNT,
+              payload: await countAllMessagesInLobby(user.id),
+            });
+          });
+        clients
+          .filter((client) => {
+            return client.playerId !== socket.playerId;
+          })
+          .map(async (client) => {
+            client.send({
+              type: PUSH_NOTIFICATION,
+              payload: {
+                title: `New chat message`,
+                message: `${socket.user.name} in game ${socket.gameId}: ${payload}`,
+                gameId: socket.gameId,
+              },
+            });
+          });
       })
     );
   } catch (error) {
