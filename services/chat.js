@@ -31,8 +31,6 @@ const getAllMessagesInGame = async (gameId, playerId) => {
 
 const countAllMessagesInLobby = async (userId) => {
   const messagesCountList = await Game.findAll({
-    benchmark: true,
-    logging: console.log,
     attributes: ["id", [Sequelize.fn("COUNT", "*"), "messagesCount"]],
     include: [
       {
