@@ -1,6 +1,8 @@
 const dotenv = require("dotenv");
 const sgMail = require("@sendgrid/mail");
 const { User, Game, Game_User, Sequelize } = require("../models");
+const { PUSH_NOTIFICATION } = require("../constants/outgoingMessageTypes");
+const { getClientsByPlayerId } = require("../socketClients");
 
 dotenv.config();
 
@@ -19,7 +21,7 @@ const mail = (to, subject, text) => {
   sgMail.send(msg).catch((err) => console.error(err));
 };
 
-sendFinishedGameNotifications = async (gameId) => {
+const sendFinishedGameNotifications = async (gameId) => {
   try {
     const users = await User.findAll({
       include: {
@@ -37,13 +39,25 @@ sendFinishedGameNotifications = async (gameId) => {
         mail(user.email, subject, text);
       }
     });
+    users.forEach((user) => {
+      getClientsByPlayerId(user.id).forEach((socket) =>
+        socket.send({
+          type: PUSH_NOTIFICATION,
+          payload: {
+            title: `${user.name}, Erudite game ${gameId} is over!`,
+            message: `${user.name}, Erudite game ${gameId} is over! Results: https://erudit.ksinia.net/game/${gameId}`,
+            gameId,
+          },
+        })
+      );
+    });
   } catch (err) {
     console.error(err);
   }
 };
 
 const sendActiveGameNotifications = async () => {
-  // взять людей, у которых есть незаконченные и незаархивированные игры и у которых есть email
+  // TODO: взять людей, у которых есть незаконченные и незаархивированные игры и у которых есть email
   // включить игры в запрос,
   // но только те, где данный пользователь активный сейчас
   // для каждого пользователя отправить письмо со ссылками на игры

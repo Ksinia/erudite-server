@@ -16,6 +16,10 @@ const {
   NO_DUPLICATIONS,
   DELETE_GAME_IN_LOBBY,
 } = require("../constants/outgoingMessageTypes");
+const {
+  sendTurnNotification,
+  sendDisapproveNotification,
+} = require("../services/game");
 
 function factory(webSocketsServer) {
   const router = new Router();
@@ -67,6 +71,7 @@ function factory(webSocketsServer) {
       webSocketsServer.to(gameId).send(updatedGameAction);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
       webSocketsServer.to("lobby").send(lobbyAction);
+      sendTurnNotification(updatedGame.activeUserId, gameId);
       res.sendStatus(204);
     } catch (error) {
       nxt(error);
@@ -126,6 +131,9 @@ function factory(webSocketsServer) {
         sendFinishedGameNotifications(gameId);
       }
       webSocketsServer.to("lobby").send(lobbyAction);
+
+      // every time after a turn we need to inform the next player about his turn
+      sendTurnNotification(updatedGame.activeUserId, gameId);
     } catch (error) {
       next(error);
     }
@@ -148,6 +156,9 @@ function factory(webSocketsServer) {
       webSocketsServer.to(gameId).send(action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
       webSocketsServer.to("lobby").send(lobbyAction);
+      if (validation === "no") {
+        sendDisapproveNotification(updatedGame.activeUserId, gameId);
+      }
       res.sendStatus(204);
     } catch (error) {
       next(error);
@@ -197,6 +208,7 @@ function factory(webSocketsServer) {
       webSocketsServer.to(gameId).send(action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
       webSocketsServer.to("lobby").send(lobbyAction);
+      sendTurnNotification(updatedGame.activeUserId, gameId);
       res.sendStatus(204);
     } catch (error) {
       next(error);
