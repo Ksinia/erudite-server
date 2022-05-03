@@ -336,7 +336,6 @@ const sendTurnNotification = (playerId, gameId) => {
       type: PUSH_NOTIFICATION,
       payload: {
         title: `Your turn in game ${gameId}!`,
-        message: `Your turn in game ${gameId}!`,
         gameId,
       },
     })
