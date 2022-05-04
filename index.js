@@ -4,6 +4,7 @@ const cors = require("cors");
 
 const { serverPort } = require("./constants/runtime");
 const signupRouter = require("./routers/user");
+const pushRouter = require("./routers/push");
 const { router: loginRouter } = require("./auth/router");
 const gameRouterFactory = require("./routers/game");
 const { archivateOldGames } = require("./services/lobby.js");
@@ -30,6 +31,7 @@ const gameRouter = gameRouterFactory(webSocketsServer);
 app.use(signupRouter);
 app.use(loginRouter);
 app.use(gameRouter);
+app.use(pushRouter);
 
 webSocketsServer.on("connection", async (socket) => {
   socket.playerId = -1;
