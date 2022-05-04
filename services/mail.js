@@ -1,9 +1,7 @@
 const dotenv = require("dotenv");
 const sgMail = require("@sendgrid/mail");
 const { User, Game, Game_User, Sequelize } = require("../models");
-const { PUSH_NOTIFICATION } = require("../constants/outgoingMessageTypes");
 const { notify } = require("../services/notifications");
-const { getClientsByPlayerId } = require("../socketClients");
 
 dotenv.config();
 
@@ -43,7 +41,6 @@ const sendFinishedGameNotifications = async (gameId) => {
     users.forEach((user) => {
       notify(user.id, {
         title: `${user.name}, Erudite game ${gameId} is over!`,
-        message: `Game over motherfucker`,
         gameId,
       });
     });
@@ -109,10 +106,11 @@ const sendActiveGameNotifications = async () => {
       if (filteredGames.length > 0) {
         const to = user.email;
         const subject = `${user.name}, Erudite games are waiting for your action!`;
-        const text = `Hi ${user.name
-          },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
-            .map((game) => `https://erudit.ksinia.net/game/${game.id}`)
-            .join("\n")}`;
+        const text = `Hi ${
+          user.name
+        },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
+          .map((game) => `https://erudit.ksinia.net/game/${game.id}`)
+          .join("\n")}`;
         mail(to, subject, text);
         const now = new Date();
         console.log(`${user.name} was notified at ${now.toLocaleString()}`);

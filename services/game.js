@@ -1,6 +1,4 @@
 const { wordBonuses, letterBonuses } = require("../constants/bonuses");
-const { getClientsByPlayerId } = require("../socketClients");
-const { PUSH_NOTIFICATION } = require("../constants/outgoingMessageTypes");
 const { notify } = require("../services/notifications");
 
 const shuffle = (arr) => {
@@ -59,7 +57,7 @@ const getHorizontalWords = (board, previousBoard) => {
           // move left while xIndex < 0 or cell is empty
           let leftIndex = xIndex;
           //indefinite loop
-          for (; ;) {
+          for (;;) {
             leftIndex--;
             if (
               leftIndex < 0 ||
@@ -72,7 +70,7 @@ const getHorizontalWords = (board, previousBoard) => {
           // move right till xIndex >= 15 or cell is empty
           let rightIndex = xIndex;
           //indefinite loop
-          for (; ;) {
+          for (;;) {
             rightIndex++;
             if (
               rightIndex >= row.length ||
@@ -334,15 +332,14 @@ const getHorizontalOrVerticalTurn = (
 const sendTurnNotification = (playerId, gameId) => {
   notify(playerId, {
     title: `Your turn in game ${gameId}!`,
-    message: `Make your turn motherfucker!`,
     gameId,
   });
 };
 
 const sendDisapproveNotification = (playerId, gameId) => {
   notify(playerId, {
-    title: `Your turn in game ${gameId}`,
-    message: `English (or Russian), motherfuckler do you speak it?!`,
+    title: `Your turn in game ${gameId} is not approved`,
+    message: `Please undo your turn and make another one`,
     gameId,
   });
 };
