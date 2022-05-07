@@ -33,7 +33,8 @@
     "sequelize": "^5.21.9",
     "sequelize-auto-migrations": "github:scimonster/sequelize-auto-migrations",
     "socket.io": "^2.3.0",
-    "umzug": "^2.3.0"
+    "umzug": "^2.3.0",
+    "web-push": "3.5.0"
   },
   "devDependencies": {
     "eslint": "^7.0.0",

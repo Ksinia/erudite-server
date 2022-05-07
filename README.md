@@ -12,11 +12,25 @@ This is a Russian Scrabble-like game which is made in accordance with the rules 
 
 This project was created using Express.js server and Sequelize ORM.
 
-## instalation
+## installation
 
 - Run `npm install`.
 - Connect to a local database (configuration is in the file `/config/config.json`).
 - Start the server with `npm run start` for production or `npm run dev` for development.
+
+## Database migration
+
+To create migration run `npm run db:makemigrations`.
+
+To apply migration rerun the application.
+
+## Local develop with docker-compose
+
+Run 
+```
+docker-compose up -d 
+```
+to start local postgres14 container. See `docker-compose.yaml` for more details
 
 ## Technologies used
 
