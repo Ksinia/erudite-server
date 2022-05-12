@@ -1,6 +1,5 @@
 const webpush = require("web-push");
-
-const subscriptions = {}; // SHOULD BE A DATABASE TABLE!!!
+const { Subscription, User, Subscription_User } = require("../models");
 
 webpush.setVapidDetails(
   "https://erudit.ksinia.net",
@@ -8,24 +7,50 @@ webpush.setVapidDetails(
   process.env.VAPI_KEY || "ZGlatY9qBu2xGgbuOt1dIrwXzSDE-jBb1pnxfiwQDcY" // OOPS. Leaked key. But seriously don't do that. Generate new and save in heroku
 );
 
-function addSubscription(userId, subscription) {
-  subscriptions[userId] = [subscription].concat(subscriptions[userId]);
+async function addSubscription(userId, subscriptionDetails, userAgent) {
+  let subscription = await Subscription.findOne({
+    where: {
+      subscription: subscriptionDetails,
+    },
+  });
+  if (!subscription) {
+    subscription = await Subscription.create({
+      subscription: subscriptionDetails,
+      userAgent,
+    });
+  }
+  const user = await User.findByPk(userId);
+  await subscription.addUsers(user);
+
+  return subscription;
 }
 
-function notify(userId, { title, message, gameId } = {}) {
-  const subs = subscriptions[userId];
-  if (Array.isArray(subs)) {
-    subs.filter(Boolean).forEach(async (s) => {
-      try {
-        console.log("Sending offline push message to", s);
-        await webpush.sendNotification(
-          s,
-          JSON.stringify({ title, message, gameId })
-        );
-      } catch (e) {
-        console.error("uh oh", e);
-      }
+async function notify(userId, { title, message, gameId } = {}) {
+  try {
+    const subscriptions = await Subscription.findAll({
+      include: [
+        {
+          model: User,
+          attributes: [],
+          as: "users",
+          through: Subscription_User,
+          where: { id: userId },
+        },
+      ],
     });
+    if (Array.isArray(subscriptions)) {
+      await Promise.all(
+        subscriptions.filter(Boolean).map(async (subscription) => {
+          console.log("Sending offline push message to", subscription);
+          webpush.sendNotification(
+            subscription.subscription,
+            JSON.stringify({ title, message, gameId })
+          );
+        })
+      );
+    }
+  } catch (e) {
+    console.error(e);
   }
 }
 

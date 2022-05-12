@@ -28,6 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       as: "games",
       through: models.Game_User,
     });
+    User.belongsToMany(models.Subscription, {
+      as: "subscriptions",
+      through: models.Subscription_User,
+    });
   };
 
   return User;
