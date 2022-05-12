@@ -17,9 +17,9 @@ const {
   ALL_MESSAGES,
   ALL_GAMES,
   GAME_UPDATED,
-  PUSH_NOTIFICATION,
 } = require("./constants/outgoingMessageTypes");
 const fetchGame = require("./services/fetchGame");
+const { notify } = require("./services/notifications");
 
 const receiveSaveAndSendNewMessage = async (
   webSocketsServer,
@@ -56,31 +56,23 @@ const receiveSaveAndSendNewMessage = async (
       attributes: ["id", "name", "email"],
     });
     await Promise.all(
-      usersOfThisGame.map(async (user) => {
-        const clients = await Promise.all(getClientsByPlayerId(user.id));
-        clients
-          .filter((client) => !client.gameId)
-          .map(async (client) => {
-            client.send({
-              type: MESSAGES_COUNT,
-              payload: await countAllMessagesInLobby(user.id),
-            });
+      usersOfThisGame
+        .filter((user) => user.id !== socket.user.id)
+        .map(async (user) => {
+          notify(user.id, {
+            title: `New chat message`,
+            message: `${socket.user.name} in game ${socket.gameId}: ${payload}`,
           });
-        clients
-          .filter((client) => {
-            return client.playerId !== socket.playerId;
-          })
-          .map(async (client) => {
-            client.send({
-              type: PUSH_NOTIFICATION,
-              payload: {
-                title: `New chat message`,
-                message: `${socket.user.name} in game ${socket.gameId}: ${payload}`,
-                gameId: socket.gameId,
-              },
+          const clients = await Promise.all(getClientsByPlayerId(user.id));
+          clients
+            .filter((client) => !client.gameId)
+            .map(async (client) => {
+              client.send({
+                type: MESSAGES_COUNT,
+                payload: await countAllMessagesInLobby(user.id),
+              });
             });
-          });
-      })
+        })
     );
   } catch (error) {
     console.log("problem getting users of this game:", error);
