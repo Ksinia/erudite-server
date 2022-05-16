@@ -62,6 +62,7 @@ const receiveSaveAndSendNewMessage = async (
           notify(user.id, {
             title: `New chat message`,
             message: `${socket.user.name} in game ${socket.gameId}: ${payload}`,
+            gameId: socket.gameId,
           });
           const clients = await Promise.all(getClientsByPlayerId(user.id));
           clients

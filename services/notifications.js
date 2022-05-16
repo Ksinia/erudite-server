@@ -42,10 +42,25 @@ async function notify(userId, { title, message, gameId } = {}) {
       await Promise.all(
         subscriptions.filter(Boolean).map(async (subscription) => {
           console.log("Sending offline push message to", subscription);
-          webpush.sendNotification(
-            subscription.subscription,
-            JSON.stringify({ title, message, gameId })
-          );
+          try {
+            await webpush.sendNotification(
+              subscription.subscription,
+              JSON.stringify({ title, message, gameId })
+            );
+            await subscription.update({
+              failureCount: 0,
+              lastSuccess: new Date(),
+            });
+          } catch (e) {
+            console.error("Sending offline push message failed:", e);
+            if (subscription.failureCount === 3) {
+              await subscription.destroy();
+            } else {
+              await subscription.update({
+                failureCount: subscription.failureCount + 1,
+              });
+            }
+          }
         })
       );
     }
