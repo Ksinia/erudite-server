@@ -7,7 +7,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "db:makemigrations": "./node_modules/sequelize-auto-migrations/bin/makemigration.js",
-    "lint": "eslint . --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
+
   },
   "keywords": [],
   "author": "",
