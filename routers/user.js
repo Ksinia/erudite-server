@@ -5,6 +5,7 @@ const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");
 const { toJWT } = require("../auth/jwt");
 const { clientUrl } = require("../constants/runtime");
+const { sendPasswordResetLink } = require("../services/mail");
 
 const router = new Router();
 
@@ -53,7 +54,6 @@ router.post("/change-password", authMiddleware, async (req, res, next) => {
     res.status(400).send({
       message: "Password should not be empty",
     });
-    return;
   } else {
     const newPassword = bcrypt.hashSync(req.body.password, 10);
     try {
@@ -70,7 +70,6 @@ router.post("/generate-link", async (req, res, next) => {
     res.status(400).send({
       message: "Name should not be empty",
     });
-    return;
   } else {
     try {
       const currentUser = await User.findOne({
@@ -80,13 +79,17 @@ router.post("/generate-link", async (req, res, next) => {
         res.status(400).send({
           message: "User with that name does not exist",
         });
-        return;
       } else {
         const shortTermJwt = toJWT({ userId: currentUser.id }, true);
         const link = `${clientUrl}/user?jwt=${shortTermJwt}`;
-        // TODO: send link by email
-        await currentUser.update({ link });
-        res.send("Link generated");
+        if (currentUser.email) {
+          await sendPasswordResetLink(currentUser, link);
+          await currentUser.update({ link });
+          res.send("Link sent");
+        } else {
+          await currentUser.update({ link });
+          res.send("Link generated");
+        }
       }
     } catch (error) {
       next(error);

@@ -122,7 +122,14 @@ const sendActiveGameNotifications = async () => {
   }
 };
 
+const sendPasswordResetLink = async (user, link) => {
+  const subject = `${user.name}, Erudite password recovery`;
+  const text = `Hi ${user.name},\n\nYou can reset your password here: ${link}`;
+  mail(user.email, subject, text);
+};
+
 module.exports = {
   sendFinishedGameNotifications,
   sendActiveGameNotifications,
+  sendPasswordResetLink,
 };
