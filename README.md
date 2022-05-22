@@ -16,6 +16,7 @@ This project was created using Express.js server and Sequelize ORM.
 
 - Run `npm install`.
 - Connect to a local database (configuration is in the file `/config/config.json`).
+- Set SENDGRID_API_KEY environment variable to send email notifications and restore password emails.
 - Start the server with `npm run start` for production or `npm run dev` for development.
 
 ## Database migration

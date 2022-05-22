@@ -1,10 +1,11 @@
 const webpush = require("web-push");
 const { Subscription, User, Subscription_User } = require("../models");
+const { clientUrl } = require("../constants/runtime");
 
 webpush.setVapidDetails(
-  "https://erudit.ksinia.net",
+  clientUrl,
   "BCuWzn-RCbRvgqOZ-YmJQ2h29nYRhKalJZ2m5ZfUJwkwdUqfX_EMpfVTzk3MeCv_yaVsMisl_9czEbjmx7T3JFc",
-  process.env.VAPI_KEY || "ZGlatY9qBu2xGgbuOt1dIrwXzSDE-jBb1pnxfiwQDcY" // OOPS. Leaked key. But seriously don't do that. Generate new and save in heroku
+  process.env.VAPI_KEY || "ZGlatY9qBu2xGgbuOt1dIrwXzSDE-jBb1pnxfiwQDcY" //TODO:  OOPS. Leaked key. But seriously don't do that. Generate new and save in heroku
 );
 
 async function addSubscription(userId, subscriptionDetails, userAgent) {

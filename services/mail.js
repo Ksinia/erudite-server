@@ -1,18 +1,16 @@
-const dotenv = require("dotenv");
 const sgMail = require("@sendgrid/mail");
 const { User, Game, Game_User, Sequelize } = require("../models");
 const { notify } = require("../services/notifications");
-
-dotenv.config();
+const { sendgridApiKey, clientUrl, email } = require("../constants/runtime");
 
 // using Twilio SendGrid's v3 Node.js Library
 // https://github.com/sendgrid/sendgrid-nodejs
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+sgMail.setApiKey(sendgridApiKey);
 
 const mail = (to, subject, text) => {
   const msg = {
     to,
-    from: "noreply@ksinia.net",
+    from: email,
     subject,
     text,
     // html: "<strong>and easy to do anywhere, even with Node.js</strong>",
@@ -34,7 +32,7 @@ const sendFinishedGameNotifications = async (gameId) => {
     users.forEach((user) => {
       if (user.email) {
         const subject = `${user.name}, Erudite game ${gameId} is over!`;
-        const text = `${user.name}, Erudite game ${gameId} is over! Results: https://erudit.ksinia.net/game/${gameId}`;
+        const text = `${user.name}, Erudite game ${gameId} is over! Results: ${clientUrl}/game/${gameId}`;
         mail(user.email, subject, text);
       }
     });
@@ -109,7 +107,7 @@ const sendActiveGameNotifications = async () => {
         const text = `Hi ${
           user.name
         },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
-          .map((game) => `https://erudit.ksinia.net/game/${game.id}`)
+          .map((game) => `${clientUrl}/game/${game.id}`)
           .join("\n")}`;
         mail(to, subject, text);
         const now = new Date();

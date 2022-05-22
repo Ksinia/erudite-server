@@ -1,3 +1,4 @@
 /node_modules
 /migrations/_current_bak.json
-.env
+.env.*.local
+/scripts/
