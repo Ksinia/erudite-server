@@ -16,6 +16,18 @@ router.post("/signup", async (req, res, next) => {
     });
     return;
   }
+  if (!req.body.name) {
+    res.status(400).send({
+      message: "Name should not be empty",
+    });
+    return;
+  }
+  if (!req.body.email) {
+    res.status(400).send({
+      message: "Email should not be empty",
+    });
+    return;
+  }
   let userWithSameName = null;
   try {
     userWithSameName = await User.findOne({
@@ -24,12 +36,23 @@ router.post("/signup", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+  let userWithSameEmail = null;
+  try {
+    userWithSameEmail = await User.findOne({
+      where: { email: req.body.email },
+    });
+  } catch (error) {
+    next(error);
+  }
   if (userWithSameName) {
     res.status(400).send({ message: "This name is already in use" });
+  } else if (userWithSameEmail) {
+    res.status(400).send({ message: "This email is already in use" });
   } else {
     const userData = {
       name: req.body.name,
       password: bcrypt.hashSync(req.body.password, 10),
+      email: req.body.email,
     };
     try {
       const newUser = await User.create(userData);
