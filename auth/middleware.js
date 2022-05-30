@@ -9,10 +9,14 @@ function auth(req, res, next) {
       const data = toData(auth[1]);
       User.findByPk(data.userId)
         .then((user) => {
-          if (!user) return next("User does not exist");
-
-          req.user = user;
-          next();
+          if (!user) {
+            res.status(401).send({
+              message: "User does not exist",
+            });
+          } else {
+            req.user = user;
+            next();
+          }
         })
         .catch(next);
     } catch (error) {

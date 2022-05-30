@@ -30,7 +30,7 @@ const sendFinishedGameNotifications = async (gameId) => {
       attributes: ["id", "name", "email"],
     });
     users.forEach((user) => {
-      if (user.email) {
+      if (user.email && user.emailConfirmed) {
         const subject = `${user.name}, Erudite game ${gameId} is over!`;
         const text = `${user.name}, Erudite game ${gameId} is over! Results: ${clientUrl}/game/${gameId}`;
         mail(user.email, subject, text);
@@ -102,17 +102,19 @@ const sendActiveGameNotifications = async () => {
         (game) => game.activeUserId === user.id
       );
       if (filteredGames.length > 0) {
-        const to = user.email;
-        const subject = `${user.name}, Erudite games are waiting for your action!`;
-        const text = `Hi ${
-          user.name
-        },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
-          .map((game) => `${clientUrl}/game/${game.id}`)
-          .join("\n")}`;
-        mail(to, subject, text);
-        const now = new Date();
-        console.log(`${user.name} was notified at ${now.toLocaleString()}`);
-        user.update({ notifiedAt: now });
+        if (user.email && user.emailConfirmed) {
+          const to = user.email;
+          const subject = `${user.name}, Erudite games are waiting for your action!`;
+          const text = `Hi ${
+            user.name
+          },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
+            .map((game) => `${clientUrl}/game/${game.id}`)
+            .join("\n")}`;
+          mail(to, subject, text);
+          const now = new Date();
+          console.log(`${user.name} was notified at ${now.toLocaleString()}`);
+          user.update({ notifiedAt: now });
+        }
       }
     });
   } catch (err) {
@@ -126,8 +128,15 @@ const sendPasswordResetLink = async (user, link) => {
   mail(user.email, subject, text);
 };
 
+const sendEmailConfirmationLink = (user, link) => {
+  const subject = `${user.name}, Erudite email confirmation`;
+  const text = `Hi ${user.name},\n\nPlease confirm your email by clicking this link: ${link}`;
+  mail(user.email, subject, text);
+};
+
 module.exports = {
   sendFinishedGameNotifications,
   sendActiveGameNotifications,
   sendPasswordResetLink,
+  sendEmailConfirmationLink,
 };

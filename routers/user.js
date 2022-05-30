@@ -3,9 +3,12 @@ const { User, Game, Sequelize } = require("../models");
 const bcrypt = require("bcrypt");
 const { login } = require("../auth/router");
 const authMiddleware = require("../auth/middleware");
-const { toJWT } = require("../auth/jwt");
+const { toJWT, toData } = require("../auth/jwt");
 const { clientUrl } = require("../constants/runtime");
-const { sendPasswordResetLink } = require("../services/mail");
+const {
+  sendPasswordResetLink,
+  sendEmailConfirmationLink,
+} = require("../services/mail");
 
 const router = new Router();
 
@@ -57,10 +60,14 @@ router.post("/signup", async (req, res, next) => {
     try {
       const newUser = await User.create(userData);
       login(res, next, newUser.name, req.body.password);
+      const shortTermJwt = toJWT(
+        { userId: newUser.id, email: newUser.email },
+        true
+      );
+      const link = `${clientUrl}/confirm-email?jwt=${shortTermJwt}`;
+      sendEmailConfirmationLink(newUser, link);
     } catch (error) {
       if (error.name === "SequelizeValidationError") {
-        console.log("Error errors[0] type:", typeof error.errors[0]);
-        console.log("errors[0] class name:", error.errors[0].constructor.name);
         res.status(400).send({
           message: error.errors[0].message,
         });
@@ -193,6 +200,26 @@ router.get("/my/archived-games", authMiddleware, async (req, res, next) => {
     res.send(sortedGames);
   } catch (error) {
     next(error);
+  }
+});
+
+router.get("/confirm-email", authMiddleware, async (req, res, next) => {
+  const currentUser = req.user;
+  const auth =
+    req.headers.authorization && req.headers.authorization.split(" ");
+  const data = toData(auth[1]);
+  const emailFromJwt = data.email;
+  if (emailFromJwt !== currentUser.email) {
+    res.status(401).send({
+      message: "Email does not match",
+    });
+  } else {
+    try {
+      await currentUser.update({ emailConfirmed: true });
+      res.send("Email confirmed");
+    } catch (error) {
+      next(error);
+    }
   }
 });
 

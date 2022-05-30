@@ -373,6 +373,13 @@
                     "field": "notifiedAt",
                     "seqType": "Sequelize.DATE"
                 },
+                "emailConfirmed": {
+                    "defaultValue": {
+                        "value": false
+                    },
+                    "field": "emailConfirmed",
+                    "seqType": "Sequelize.BOOLEAN"
+                },
                 "createdAt": {
                     "allowNull": false,
                     "field": "createdAt",
@@ -387,5 +394,5 @@
             "indexes": []
         }
     },
-    "revision": 27
+    "revision": 28
 }

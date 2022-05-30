@@ -21,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       defaultValue: "2020-02-22 21:27:29.422+00",
     },
+    emailConfirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
   });
 
   User.associate = function (models) {
