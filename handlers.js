@@ -141,10 +141,17 @@ const addGameToSocket = async (webSocketsServer, socket, gameId) => {
   }
 };
 const removeGameFromSocket = async (webSocketsServer, socket, gameId) => {
-  await registerVisit(socket.gameId, socket.playerId);
-
-  socket.leave(gameId);
-  delete socket.gameId;
+  if (!gameId) {
+    console.log(`gameId is ${gameId} for socket.playerId ${socket.playerId}`);
+  } else {
+    try {
+      await registerVisit(socket.gameId, socket.playerId);
+      socket.leave(gameId);
+      delete socket.gameId;
+    } catch (error) {
+      console.log(error);
+    }
+  }
 };
 const enterLobby = async (webSocketsServer, socket) => {
   socket.join("lobby");
