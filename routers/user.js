@@ -207,7 +207,13 @@ router.get("/confirm-email", authMiddleware, async (req, res, next) => {
   const currentUser = req.user;
   const auth =
     req.headers.authorization && req.headers.authorization.split(" ");
-  const data = toData(auth[1]);
+  let data;
+  try {
+    data = toData(auth[1]);
+  } catch (error) {
+    console.log("problem retrieving user:", error);
+    next(error);
+  }
   const emailFromJwt = data.email;
   if (emailFromJwt !== currentUser.email) {
     res.status(401).send({

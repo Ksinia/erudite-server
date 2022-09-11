@@ -17,6 +17,7 @@ const {
   ALL_MESSAGES,
   ALL_GAMES,
   GAME_UPDATED,
+  LOGIN_OR_SIGNUP_ERROR,
 } = require("./constants/outgoingMessageTypes");
 const fetchGame = require("./services/fetchGame");
 const { notify } = require("./services/notifications");
@@ -81,14 +82,16 @@ const receiveSaveAndSendNewMessage = async (
 };
 
 const addUserToSocket = async (webSocketsServer, socket, jwt) => {
-  const data = toData(jwt);
   let user = undefined;
   try {
+    const data = toData(jwt);
     user = await User.findByPk(data.userId, {
       attributes: ["id", "name"],
     });
   } catch (error) {
     console.log("problem retrieving user:", error);
+    // TODO: remove jwt from local storage on fe
+    socket.send({ type: LOGIN_OR_SIGNUP_ERROR, payload: error });
   }
   if (user) {
     socket.playerId = user.id;
@@ -100,11 +103,10 @@ const addUserToSocket = async (webSocketsServer, socket, jwt) => {
       // if user was on a game page but not logged in and then he logs in we need to send him more full game object
       if (socket.gameId) {
         const game = await fetchGame(socket.gameId, user.id);
-        const action = {
+        socket.send({
           type: GAME_UPDATED,
           payload: { gameId: socket.gameId, game },
-        };
-        socket.send(action);
+        });
         const allMessages = await getAllMessagesInGame(socket.gameId, user.id);
         if (allMessages.length > 0) {
           socket.send({ type: ALL_MESSAGES, payload: allMessages });
