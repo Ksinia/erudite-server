@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { toJWT } = require("./jwt");
-const { User } = require("../models");
+const { User, Sequelize } = require("../models");
 const bcrypt = require("bcrypt");
 const authMiddleware = require("../auth/middleware");
 const { LOGIN_SUCCESS } = require("../constants/outgoingMessageTypes");
@@ -13,7 +13,11 @@ async function login(res, next, name = null, password = null) {
   } else {
     try {
       const currentUser = await User.findOne({
-        where: { name: name },
+        where: {
+          name: {
+            [Sequelize.Op.iLike]: name.toLowerCase(),
+          },
+        },
       });
       if (!currentUser) {
         res.status(400).send({
@@ -48,7 +52,7 @@ async function login(res, next, name = null, password = null) {
 const router = new Router();
 
 router.post("/login", (req, res, next) => {
-  const name = req.body.name;
+  const name = req.body.name.trim();
   const password = req.body.password;
   login(res, next, name, password);
 });

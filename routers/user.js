@@ -31,10 +31,19 @@ router.post("/signup", async (req, res, next) => {
     });
     return;
   }
+  const userData = {
+    name: req.body.name.trim(),
+    password: bcrypt.hashSync(req.body.password, 10),
+    email: req.body.email.trim(),
+  };
   let userWithSameName = null;
   try {
     userWithSameName = await User.findOne({
-      where: { name: req.body.name },
+      where: {
+        name: {
+          [Sequelize.Op.iLike]: userData.name.toLowerCase(),
+        },
+      },
     });
   } catch (error) {
     next(error);
@@ -42,7 +51,11 @@ router.post("/signup", async (req, res, next) => {
   let userWithSameEmail = null;
   try {
     userWithSameEmail = await User.findOne({
-      where: { email: req.body.email },
+      where: {
+        email: {
+          [Sequelize.Op.iLike]: req.body.email.toLowerCase(),
+        },
+      },
     });
   } catch (error) {
     next(error);
@@ -52,14 +65,9 @@ router.post("/signup", async (req, res, next) => {
   } else if (userWithSameEmail) {
     res.status(400).send({ message: "This email is already in use" });
   } else {
-    const userData = {
-      name: req.body.name,
-      password: bcrypt.hashSync(req.body.password, 10),
-      email: req.body.email,
-    };
     try {
       const newUser = await User.create(userData);
-      login(res, next, newUser.name, req.body.password);
+      await login(res, next, newUser.name, req.body.password);
       const shortTermJwt = toJWT(
         { userId: newUser.id, email: newUser.email },
         true
