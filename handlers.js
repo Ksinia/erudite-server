@@ -35,7 +35,7 @@ const receiveSaveAndSendNewMessage = async (
       GameId: socket.gameId,
       UserId: socket.user.id,
     });
-    webSocketsServer.to(socket.gameId).send({
+    webSocketsServer.to(socket.gameId).emit("message", {
       type: NEW_MESSAGE,
       payload: {
         userId: socket.playerId,
@@ -69,7 +69,7 @@ const receiveSaveAndSendNewMessage = async (
           clients
             .filter((client) => !client.gameId)
             .map(async (client) => {
-              client.send({
+              client.emit("message", {
                 type: MESSAGES_COUNT,
                 payload: await countAllMessagesInLobby(user.id),
               });
@@ -91,7 +91,7 @@ const addUserToSocket = async (webSocketsServer, socket, jwt) => {
   } catch (error) {
     console.log("problem retrieving user:", error);
     // TODO: remove jwt from local storage on fe
-    socket.send({ type: LOGIN_OR_SIGNUP_ERROR, payload: error });
+    socket.emit("message", { type: LOGIN_OR_SIGNUP_ERROR, payload: error });
   }
   if (user) {
     socket.playerId = user.id;
@@ -99,17 +99,17 @@ const addUserToSocket = async (webSocketsServer, socket, jwt) => {
     addPlayerClient(socket);
     try {
       const count = await countAllMessagesInLobby(user.id);
-      socket.send({ type: MESSAGES_COUNT, payload: count });
+      socket.emit("message", { type: MESSAGES_COUNT, payload: count });
       // if user was on a game page but not logged in and then he logs in we need to send him more full game object
       if (socket.gameId) {
         const game = await fetchGame(socket.gameId, user.id);
-        socket.send({
+        socket.emit("message", {
           type: GAME_UPDATED,
           payload: { gameId: socket.gameId, game },
         });
         const allMessages = await getAllMessagesInGame(socket.gameId, user.id);
         if (allMessages.length > 0) {
-          socket.send({ type: ALL_MESSAGES, payload: allMessages });
+          socket.emit("message", { type: ALL_MESSAGES, payload: allMessages });
         }
         await registerVisit(socket.gameId, user.id);
       }
@@ -132,7 +132,7 @@ const addGameToSocket = async (webSocketsServer, socket, gameId) => {
       socket.playerId
     );
     if (allMessages.length > 0) {
-      socket.send({ type: ALL_MESSAGES, payload: allMessages });
+      socket.emit("message", { type: ALL_MESSAGES, payload: allMessages });
     }
 
     if (socket.user) {
@@ -160,9 +160,9 @@ const enterLobby = async (webSocketsServer, socket) => {
   delete socket.gameId;
   try {
     const count = await countAllMessagesInLobby(socket.playerId);
-    socket.send({ type: MESSAGES_COUNT, payload: count });
+    socket.emit("message", { type: MESSAGES_COUNT, payload: count });
     const games = await fetchGames();
-    socket.send({ type: ALL_GAMES, payload: games });
+    socket.emit("message", { type: ALL_GAMES, payload: games });
   } catch (error) {
     console.log(error);
   }

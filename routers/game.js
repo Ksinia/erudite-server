@@ -35,7 +35,7 @@ function factory(webSocketsServer) {
         language
       );
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
       res.send(lobbyAction.payload);
     } catch (error) {
       next(error);
@@ -48,12 +48,12 @@ function factory(webSocketsServer) {
     try {
       const updatedGame = await joinGame(currentUser, gameId);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
       const updatedGameAction = {
         type: GAME_UPDATED,
         payload: { gameId: updatedGame.id, game: updatedGame },
       };
-      webSocketsServer.to(gameId).send(updatedGameAction);
+      webSocketsServer.to(gameId).emit("message", updatedGameAction);
       res.send(updatedGameAction);
     } catch (error) {
       next(error);
@@ -68,9 +68,9 @@ function factory(webSocketsServer) {
         type: GAME_UPDATED,
         payload: { gameId, game: updatedGame },
       };
-      webSocketsServer.to(gameId).send(updatedGameAction);
+      webSocketsServer.to(gameId).emit("message", updatedGameAction);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
       sendTurnNotification(updatedGame.activeUserId, gameId);
       res.sendStatus(204);
     } catch (error) {
@@ -120,7 +120,7 @@ function factory(webSocketsServer) {
         type: GAME_UPDATED,
         payload: { gameId, game: updatedGame },
       };
-      webSocketsServer.to(gameId).send(streamAction);
+      webSocketsServer.to(gameId).emit("message", streamAction);
 
       let lobbyAction = getUpdatedGameForLobby(updatedGame);
       if (updatedGame.phase === "finished") {
@@ -130,7 +130,7 @@ function factory(webSocketsServer) {
         };
         sendFinishedGameNotifications(gameId);
       }
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
 
       // every time after a turn we need to inform the next player about his turn
       sendTurnNotification(updatedGame.activeUserId, gameId);
@@ -153,9 +153,9 @@ function factory(webSocketsServer) {
           game: updatedGame,
         },
       };
-      webSocketsServer.to(gameId).send(action);
+      webSocketsServer.to(gameId).emit("message", action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
       if (validation === "no") {
         sendDisapproveNotification(updatedGame.activeUserId, gameId);
       }
@@ -178,9 +178,9 @@ function factory(webSocketsServer) {
           game: updatedGame,
         },
       };
-      webSocketsServer.to(gameId).send(action);
+      webSocketsServer.to(gameId).emit("message", action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
       res.sendStatus(204);
     } catch (error) {
       next(error);
@@ -205,9 +205,9 @@ function factory(webSocketsServer) {
           game: updatedGame,
         },
       };
-      webSocketsServer.to(gameId).send(action);
+      webSocketsServer.to(gameId).emit("message", action);
       const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").send(lobbyAction);
+      webSocketsServer.to("lobby").emit("message", lobbyAction);
       sendTurnNotification(updatedGame.activeUserId, gameId);
       res.sendStatus(204);
     } catch (error) {

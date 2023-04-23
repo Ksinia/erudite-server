@@ -17,7 +17,9 @@ const app = express();
 const http = require("http").createServer(app);
 const webSocketsServer = require("socket.io")(http, {
   path: "/socket",
-  origins: originUrls,
+  cors: {
+    origin: originUrls,
+  },
 });
 
 const bodyParserMiddleware = bodyParser.json();
