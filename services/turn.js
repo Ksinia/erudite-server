@@ -63,8 +63,9 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
       // user didn't pass
       let userLetters = game.letters[currentUserId].slice();
       let currentGameBoard = game.board.map((row) => row.slice());
-      const wildCardsInHandQty = userLetters.filter((letter) => letter === "*")
-        .length;
+      const wildCardsInHandQty = userLetters.filter(
+        (letter) => letter === "*"
+      ).length;
       // check if user has changed wildcard (*) on board
       let usedWildCardsQty = 0;
       userBoard.forEach((row) => {

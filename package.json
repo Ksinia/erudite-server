@@ -9,7 +9,6 @@
     "db:makemigrations": "./node_modules/sequelize-auto-migrations/bin/makemigration.js",
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
-
   },
   "keywords": [],
   "author": "",
@@ -32,7 +31,7 @@
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
     "pg": "^8.2.1",
-    "sequelize": "^5.21.9",
+    "sequelize": "^6.31.0",
     "sequelize-auto-migrations": "github:scimonster/sequelize-auto-migrations",
     "socket.io": "^2.3.0",
     "umzug": "^2.3.0",
