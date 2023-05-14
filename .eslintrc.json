@@ -1,5 +1,12 @@
 {
-  "ignorePatterns": ["migrations/", "*.md", "LICENSE"],
+  "parser": "@typescript-eslint/parser",
+  "ignorePatterns": [
+    "dist/",
+    "migrations/",
+    "*.json",
+    "*.md",
+    "LICENSE"
+  ],
   "env": {
     "es6": true,
     "node": true
@@ -8,8 +15,16 @@
     "ecmaVersion": 2020,
     "sourceType": "module"
   },
-  "plugins": ["prettier"],
-  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended",
+    "prettier"
+  ],
   "rules": {
     "prettier/prettier": "error"
   }

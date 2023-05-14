@@ -8,7 +8,7 @@ import User from "../models/user.js";
  * returns game object
  */
 export default async (currentUser, maxPlayers, playersIds, language) => {
-  let users;
+  let users = [];
   let phase = "waiting";
   if (playersIds) {
     users = await User.findAll({
