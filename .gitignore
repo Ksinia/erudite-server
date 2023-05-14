@@ -2,3 +2,4 @@
 /migrations/_current_bak.json
 .env.*.local
 /scripts/
+/dist/
