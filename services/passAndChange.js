@@ -1,11 +1,12 @@
-const { User, Game } = require("../models");
-const { getNextTurn, giveLetters, substract } = require("./game");
-const updateGame = require("./updateGame");
+import Game from "../models/game.js";
+import User from "../models/user.js";
+import { getNextTurn, giveLetters, subtract } from "./game.js";
+import updateGame from "./updateGame.js";
 
 /**
- * Updates game accoring to validation and returns updated game
+ * Updates game according to validation and returns updated game
  */
-module.exports = async (currentUserId, gameId, lettersToChange) => {
+export default async (currentUserId, gameId, lettersToChange) => {
   const game = await Game.findByPk(gameId);
   // user can exchange letters only in his turn
   if (
@@ -15,9 +16,9 @@ module.exports = async (currentUserId, gameId, lettersToChange) => {
   ) {
     //check if user exchanges his own letters
 
-    // substract letters to change
+    // subtract letters to change
     const previousUserLetters = game.letters[currentUserId];
-    const remainingLetters = substract(previousUserLetters, lettersToChange);
+    const remainingLetters = subtract(previousUserLetters, lettersToChange);
     // give new letters to user
     const updatedBagAndUserLetters = giveLetters(
       game.letters.pot,

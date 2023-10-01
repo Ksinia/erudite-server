@@ -1,10 +1,10 @@
-let clientsByPlayerId = {};
+const clientsByPlayerId = {};
 
-const getClientsByPlayerId = (playerId) => {
+export const getClientsByPlayerId = (playerId) => {
   return clientsByPlayerId[playerId] || [];
 };
 
-const addPlayerClient = (socket) => {
+export const addPlayerClient = (socket) => {
   const playerId = socket.playerId;
   if (playerId === -1) {
     return;
@@ -13,7 +13,7 @@ const addPlayerClient = (socket) => {
   clientsByPlayerId[playerId].push(socket);
 };
 
-const removePlayerClient = (socket) => {
+export const removePlayerClient = (socket) => {
   const playerId = socket.playerId;
   if (playerId === -1) {
     return;
@@ -25,10 +25,4 @@ const removePlayerClient = (socket) => {
       clients.splice(index, 1);
     }
   }
-};
-
-module.exports = {
-  getClientsByPlayerId,
-  addPlayerClient,
-  removePlayerClient,
 };

@@ -1,8 +1,8 @@
-const { Router } = require("express");
-const { addSubscription } = require("../services/notifications");
-const authMiddleware = require("../auth/middleware");
+import { Router } from "express";
+import { addSubscription } from "../services/notifications.js";
+import authMiddleware from "../auth/middleware.js";
 
-const router = new Router();
+const router = Router();
 
 router.post("/subscribe", authMiddleware, async (req, res) => {
   const { subscription, userAgent } = req.body;
@@ -21,4 +21,4 @@ router.post("/subscribe", authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,7 +1,7 @@
-const { User } = require("../models");
-const { toData } = require("./jwt");
+import User from "../models/user.js";
+import { toData } from "./jwt.js";
 
-function auth(req, res, next) {
+export default function auth(req, res, next) {
   const auth =
     req.headers.authorization && req.headers.authorization.split(" ");
   if (auth && auth[0] === "Bearer" && auth[1]) {
@@ -30,5 +30,3 @@ function auth(req, res, next) {
     });
   }
 }
-
-module.exports = auth;

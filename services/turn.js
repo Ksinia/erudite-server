@@ -1,14 +1,14 @@
-const { Game } = require("../models");
-const { getWords, substract, getNextTurn, getResult } = require("./game");
-const fetchGame = require("./fetchGame");
-const updateGame = require("./updateGame");
-const { DUPLICATED_WORDS } = require("../constants/outgoingMessageTypes");
+import Game from "../models/game.js";
+import { getNextTurn, getResult, getWords, subtract } from "./game.js";
+import fetchGame from "./fetchGame.js";
+import updateGame from "./updateGame.js";
+import { DUPLICATED_WORDS } from "../constants/outgoingMessageTypes.js";
 
 /**
  * Makes turn and returns updated game
- * or returns duplicated words action if there are dublicated words
+ * or returns duplicated words action if there are duplicated words
  */
-module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
+export default async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
   const game = await Game.findByPk(gameId);
   // check if game is in turn phase and if it is current user's turn
   if (game.phase === "turn" && game.turnOrder[game.turn] === currentUserId) {
@@ -61,8 +61,8 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
       }
     } else {
       // user didn't pass
-      let userLetters = game.letters[currentUserId].slice();
-      let currentGameBoard = game.board.map((row) => row.slice());
+      const userLetters = game.letters[currentUserId].slice();
+      const currentGameBoard = game.board.map((row) => row.slice());
       const wildCardsInHandQty = userLetters.filter(
         (letter) => letter === "*"
       ).length;
@@ -167,7 +167,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
             }, []);
 
             // extract put letters from all letters
-            const keepLetters = substract(userLetters, putLetters);
+            const keepLetters = subtract(userLetters, putLetters);
             const updatedLetters = {
               ...game.letters,
               [currentUserId]: keepLetters,
@@ -175,7 +175,7 @@ module.exports = async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
             // copy game board to previous board
             // change game phase to validation
             // do not need to return passedCount to 0,
-            // because the turn may me undone
+            // because the turn may be undone
             await updateGame(game, {
               previousBoard: game.board,
               board: newBoard,

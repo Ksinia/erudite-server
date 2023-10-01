@@ -1,17 +1,28 @@
 "use strict";
 
-module.exports = (sequelize, DataTypes) => {
-  const Subscription = sequelize.define("Subscription", {
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "./index.js";
+
+class Subscription extends Model {}
+
+Subscription.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
     subscription: { type: DataTypes.JSONB, unique: true, allowNull: false },
     userAgent: { type: DataTypes.STRING },
     lastSuccess: { type: DataTypes.DATE },
     failureCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-  });
-  Subscription.associate = function (models) {
-    Subscription.belongsToMany(models.User, {
-      as: "users",
-      through: models.Subscription_User,
-    });
-  };
-  return Subscription;
-};
+  },
+  {
+    sequelize,
+    tableName: "Subscriptions",
+  }
+);
+
+export default Subscription;

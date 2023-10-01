@@ -1,21 +1,22 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
-const { serverPort } = require("./constants/runtime");
-const signupRouter = require("./routers/user");
-const pushRouter = require("./routers/push");
-const { router: loginRouter } = require("./auth/router");
-const gameRouterFactory = require("./routers/game");
-const { archivateOldGames } = require("./services/lobby.js");
-const { sendActiveGameNotifications } = require("./services/mail");
-const { originUrls } = require("./constants/runtime");
-const { removePlayerClient } = require("./socketClients");
-const handlers = require("./handlers");
+import { originUrls, serverPort } from "./constants/runtime.js";
+import signupRouter from "./routers/user.js";
+import pushRouter from "./routers/push.js";
+import { router as loginRouter } from "./auth/router.js";
+import gameRouterFactory from "./routers/game.js";
+import { archiveOldGames } from "./services/lobby.js";
+import { sendActiveGameNotifications } from "./services/mail.js";
+import { removePlayerClient } from "./socketClients.js";
+import handlers from "./handlers.js";
 
 const app = express();
-const http = require("http").createServer(app);
-const webSocketsServer = require("socket.io")(http, {
+const http = createServer(app);
+const webSocketsServer = new Server(http, {
   path: "/socket",
   cors: {
     origin: originUrls,
@@ -46,7 +47,7 @@ webSocketsServer.on("connection", async (socket) => {
 });
 
 http.listen(serverPort, () => console.log(`Listening on port: ${serverPort}`));
-archivateOldGames();
-setInterval(archivateOldGames, 1000 * 60 * 60 * 24);
+archiveOldGames();
+setInterval(archiveOldGames, 1000 * 60 * 60 * 24);
 sendActiveGameNotifications();
 setInterval(sendActiveGameNotifications, 1000 * 60 * 60 * 24);

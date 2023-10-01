@@ -27,10 +27,12 @@ To apply migration rerun the application.
 
 ## Local develop with docker-compose
 
-Run 
+Run
+
 ```
 docker-compose up -d 
 ```
+
 to start local postgres14 container. See `docker-compose.yaml` for more details
 
 ## Technologies used

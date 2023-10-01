@@ -1,11 +1,11 @@
-const { Game } = require("../models");
-const fetchGame = require("./fetchGame");
-const updateGame = require("./updateGame");
+import Game from "../models/game.js";
+import fetchGame from "./fetchGame.js";
+import updateGame from "./updateGame.js";
 
 /**
  * Undoes the turn and returns updated game
  */
-module.exports = async (currentUserId, gameId) => {
+export default async (currentUserId, gameId) => {
   const game = await Game.findByPk(gameId);
   // user can only undo own turn
   if (

@@ -1,16 +1,18 @@
-const { Router } = require("express");
-const { User, Game, Sequelize } = require("../models");
-const bcrypt = require("bcrypt");
-const { login } = require("../auth/router");
-const authMiddleware = require("../auth/middleware");
-const { toJWT, toData } = require("../auth/jwt");
-const { clientUrl } = require("../constants/runtime");
-const {
-  sendPasswordResetLink,
+import { Router } from "express";
+import Game from "../models/game.js";
+import User from "../models/user.js";
+import { Sequelize } from "../models/index.js";
+import bcrypt from "bcrypt";
+import { login } from "../auth/router.js";
+import authMiddleware from "../auth/middleware.js";
+import { toData, toJWT } from "../auth/jwt.js";
+import { clientUrl } from "../constants/runtime.js";
+import {
   sendEmailConfirmationLink,
-} = require("../services/mail");
+  sendPasswordResetLink,
+} from "../services/mail.js";
 
-const router = new Router();
+const router = Router();
 
 router.post("/signup", async (req, res, next) => {
   if (!req.body.password) {
@@ -159,7 +161,6 @@ router.get("/my/finished-games", authMiddleware, async (req, res, next) => {
           model: User,
           as: "users",
           attributes: ["id", "name"],
-          raw: true,
         },
       ],
     });
@@ -194,7 +195,6 @@ router.get("/my/archived-games", authMiddleware, async (req, res, next) => {
           model: User,
           as: "users",
           attributes: ["id", "name"],
-          raw: true,
         },
       ],
     });
@@ -237,4 +237,4 @@ router.get("/confirm-email", authMiddleware, async (req, res, next) => {
   }
 });
 
-module.exports = router;
+export default router;

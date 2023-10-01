@@ -1,4 +1,4 @@
-const wordBonuses = {
+export const wordBonuses = {
   0: { 0: 3, 7: 3, 14: 3 },
   1: { 1: 2, 13: 2 },
   2: { 2: 2, 12: 2 },
@@ -12,7 +12,7 @@ const wordBonuses = {
   14: { 0: 3, 7: 3, 14: 3 },
 };
 
-const letterBonuses = {
+export const letterBonuses = {
   0: { 3: 2, 11: 2 },
   1: { 5: 3, 9: 3 },
   2: { 6: 2, 8: 2 },
@@ -27,5 +27,3 @@ const letterBonuses = {
   13: { 5: 3, 9: 3 },
   14: { 3: 2, 11: 2 },
 };
-
-module.exports = { wordBonuses, letterBonuses };

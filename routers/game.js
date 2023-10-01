@@ -1,28 +1,28 @@
-const { Router } = require("express");
-const authMiddleware = require("../auth/middleware");
-const createGame = require("../services/create");
-const joinGame = require("../services/join");
-const startGame = require("../services/start");
-const { getUpdatedGameForLobby } = require("../services/lobby");
-const makeTurn = require("../services/turn");
-const validateTurn = require("../services/validation");
-const undoTurn = require("../services/undo");
-const passAndChange = require("../services/passAndChange");
-const fetchGame = require("../services/fetchGame");
-const { sendFinishedGameNotifications } = require("../services/mail");
-const {
-  GAME_UPDATED,
-  DUPLICATED_WORDS,
-  NO_DUPLICATIONS,
+import { Router } from "express";
+import authMiddleware from "../auth/middleware.js";
+import createGame from "../services/create.js";
+import joinGame from "../services/join.js";
+import startGame from "../services/start.js";
+import { getUpdatedGameForLobby } from "../services/lobby.js";
+import makeTurn from "../services/turn.js";
+import validateTurn from "../services/validation.js";
+import undoTurn from "../services/undo.js";
+import passAndChange from "../services/passAndChange.js";
+import fetchGame from "../services/fetchGame.js";
+import { sendFinishedGameNotifications } from "../services/mail.js";
+import {
   DELETE_GAME_IN_LOBBY,
-} = require("../constants/outgoingMessageTypes");
-const {
-  sendTurnNotification,
+  DUPLICATED_WORDS,
+  GAME_UPDATED,
+  NO_DUPLICATIONS,
+} from "../constants/outgoingMessageTypes.js";
+import {
   sendDisapproveNotification,
-} = require("../services/game");
+  sendTurnNotification,
+} from "../services/game.js";
 
-function factory(webSocketsServer) {
-  const router = new Router();
+export default function factory(webSocketsServer) {
+  const router = Router();
 
   router.post("/create", authMiddleware, async (req, res, next) => {
     const currentUser = req.user;
@@ -94,7 +94,7 @@ function factory(webSocketsServer) {
 
   //turn of the game
   router.post("/game/:id/turn", authMiddleware, async (req, res, next) => {
-    // get user from authmiddleware
+    // get user from auth middleware
     const currentUserId = req.user.id;
     const gameId = parseInt(req.params.id);
     const { userBoard, wildCardOnBoard } = req.body;
@@ -128,7 +128,7 @@ function factory(webSocketsServer) {
           type: DELETE_GAME_IN_LOBBY,
           payload: gameId,
         };
-        sendFinishedGameNotifications(gameId);
+        await sendFinishedGameNotifications(gameId);
       }
       webSocketsServer.to("lobby").emit("message", lobbyAction);
 
@@ -140,7 +140,7 @@ function factory(webSocketsServer) {
   });
 
   router.post("/game/:id/approve", authMiddleware, async (req, res, next) => {
-    // get user from authmiddleware
+    // get user from auth middleware
     const currentUserId = req.user.id;
     const gameId = parseInt(req.params.id);
     const validation = req.body.validation;
@@ -166,7 +166,7 @@ function factory(webSocketsServer) {
   });
 
   router.post("/game/:id/undo", authMiddleware, async (req, res, next) => {
-    // get user from authmiddleware
+    // get user from auth middleware
     const currentUserId = req.user.id;
     const gameId = parseInt(req.params.id);
     try {
@@ -188,7 +188,7 @@ function factory(webSocketsServer) {
   });
 
   router.post("/game/:id/change", authMiddleware, async (req, res, next) => {
-    // get user from authmiddleware
+    // get user from auth middleware
     const currentUserId = req.user.id;
     const gameId = parseInt(req.params.id);
     const lettersToChange = req.body.letters;
@@ -216,5 +216,3 @@ function factory(webSocketsServer) {
   });
   return router;
 }
-
-module.exports = factory;

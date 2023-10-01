@@ -1,14 +1,20 @@
 "use strict";
 
-module.exports = (sequelize) => {
-  const Subscription_User = sequelize.define(
-    "Subscription_User",
-    {},
-    {
-      freezeTableName: true,
-      tableName: "Subscription_User",
-    }
-  );
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "./index.js";
 
-  return Subscription_User;
-};
+class Subscription_User extends Model {}
+
+Subscription_User.init(
+  {
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
+  },
+  {
+    sequelize,
+    freezeTableName: true,
+    tableName: "Subscription_User",
+  }
+);
+
+export default Subscription_User;

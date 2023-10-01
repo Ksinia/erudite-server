@@ -1,9 +1,10 @@
-const { User, Game } = require("../models");
-const { shuffle } = require("../services/game");
-const lettersSets = require("../constants/letterSets");
-const updateGame = require("./updateGame");
+import Game from "../models/game.js";
+import User from "../models/user.js";
+import { shuffle } from "./game.js";
+import lettersSets from "../constants/letterSets/index.js";
+import updateGame from "./updateGame.js";
 
-module.exports = async (gameId) => {
+export default async (gameId) => {
   const game = await Game.findByPk(gameId, {
     include: [
       {
@@ -17,7 +18,7 @@ module.exports = async (gameId) => {
   const set = lettersSets[game.language].letters;
   // give letters to players
   const lettersForGame = shuffle(set);
-  let acc = { pot: lettersForGame.slice() };
+  const acc = { pot: lettersForGame.slice() };
   const letters = game.users.reduce((acc, user) => {
     if (!acc[user.id]) {
       acc[user.id] = [];
