@@ -1,10 +1,11 @@
-const { Game_User } = require("../models");
-module.exports = async (gameId, userId) => {
+import Game_User from "../models/game_user.js";
+
+export default async (gameId, userId) => {
   const gameUserEntry = await Game_User.findOne({
     where: { GameId: gameId, UserId: userId },
   });
   if (gameUserEntry) {
     gameUserEntry.visit = new Date();
-    gameUserEntry.save();
+    await gameUserEntry.save();
   }
 };

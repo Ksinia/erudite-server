@@ -1,21 +1,21 @@
-const { Game } = require("../models");
-const { getNextTurn, turnWordsAndScore, updateGameLetters } = require("./game");
-const lettersSets = require("../constants/letterSets");
-const fetchGame = require("./fetchGame");
-const updateGame = require("./updateGame");
+import Game from "../models/game.js";
+import { getNextTurn, turnWordsAndScore, updateGameLetters } from "./game.js";
+import lettersSets from "../constants/letterSets/index.js";
+import fetchGame from "./fetchGame.js";
+import updateGame from "./updateGame.js";
 
 /**
- * Updates game accoring to validation and returns updated game
+ * Updates game according to validation and returns updated game
  */
-module.exports = async (currentUserId, gameId, validation) => {
+export default async (currentUserId, gameId, validation) => {
   const game = await Game.findByPk(gameId);
   const newTurn = getNextTurn(game);
   // check if it is right phase and user to validate
-  // only user who's turn is next, can validate the turn
+  // only user whose turn is next, can validate the turn
   if (
-    (game.phase === "validation",
+    game.phase === "validation" &&
     game.turnOrder.includes(currentUserId) &&
-      currentUserId === game.turnOrder[newTurn])
+    currentUserId === game.turnOrder[newTurn]
   ) {
     if (validation === "yes") {
       const currentTurnUserId = game.turnOrder[game.turn];

@@ -1,7 +1,10 @@
-const sgMail = require("@sendgrid/mail");
-const { User, Game, Game_User, Sequelize } = require("../models");
-const { notify } = require("../services/notifications");
-const { sendgridApiKey, clientUrl, email } = require("../constants/runtime");
+import sgMail from "@sendgrid/mail";
+import Game from "../models/game.js";
+import User from "../models/user.js";
+import Game_User from "../models/game_user.js";
+import Sequelize from "sequelize";
+import { notify } from "./notifications.js";
+import { clientUrl, email, sendgridApiKey } from "../constants/runtime.js";
 
 // using Twilio SendGrid's v3 Node.js Library
 // https://github.com/sendgrid/sendgrid-nodejs
@@ -18,7 +21,7 @@ const mail = (to, subject, text) => {
   sgMail.send(msg).catch((err) => console.error(err));
 };
 
-const sendFinishedGameNotifications = async (gameId) => {
+export const sendFinishedGameNotifications = async (gameId) => {
   try {
     const users = await User.findAll({
       include: {
@@ -47,7 +50,7 @@ const sendFinishedGameNotifications = async (gameId) => {
   }
 };
 
-const sendActiveGameNotifications = async () => {
+export const sendActiveGameNotifications = async () => {
   // TODO: взять людей, у которых есть незаконченные и незаархивированные игры и у которых есть email
   // включить игры в запрос,
   // но только те, где данный пользователь активный сейчас
@@ -97,46 +100,41 @@ const sendActiveGameNotifications = async () => {
         },
       },
     });
-    users.forEach(async (user) => {
-      const filteredGames = user.games.filter(
-        (game) => game.activeUserId === user.id
-      );
-      if (filteredGames.length > 0) {
-        if (user.email && user.emailConfirmed) {
-          const to = user.email;
-          const subject = `${user.name}, Erudite games are waiting for your action!`;
-          const text = `Hi ${
-            user.name
-          },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
-            .map((game) => `${clientUrl}/game/${game.id}`)
-            .join("\n")}`;
-          mail(to, subject, text);
-          const now = new Date();
-          console.log(`${user.name} was notified at ${now.toLocaleString()}`);
-          user.update({ notifiedAt: now });
+    await Promise.all(
+      users.map(async (user) => {
+        const filteredGames = user.games.filter(
+          (game) => game.activeUserId === user.id
+        );
+        if (filteredGames.length > 0) {
+          if (user.email && user.emailConfirmed) {
+            const to = user.email;
+            const subject = `${user.name}, Erudite games are waiting for your action!`;
+            const text = `Hi ${
+              user.name
+            },\n\nthe following Erudite games are waiting for your action:\n\n${filteredGames
+              .map((game) => `${clientUrl}/game/${game.id}`)
+              .join("\n")}`;
+            mail(to, subject, text);
+            const now = new Date();
+            console.log(`${user.name} was notified at ${now.toLocaleString()}`);
+            await user.update({ notifiedAt: now });
+          }
         }
-      }
-    });
+      })
+    );
   } catch (err) {
     console.error(err);
   }
 };
 
-const sendPasswordResetLink = async (user, link) => {
+export const sendPasswordResetLink = async (user, link) => {
   const subject = `${user.name}, Erudite password recovery`;
   const text = `Hi ${user.name},\n\nYou can reset your password here: ${link}`;
   mail(user.email, subject, text);
 };
 
-const sendEmailConfirmationLink = (user, link) => {
+export const sendEmailConfirmationLink = (user, link) => {
   const subject = `${user.name}, Erudite email confirmation`;
   const text = `Hi ${user.name},\n\nPlease confirm your email by clicking this link: ${link}`;
   mail(user.email, subject, text);
-};
-
-module.exports = {
-  sendFinishedGameNotifications,
-  sendActiveGameNotifications,
-  sendPasswordResetLink,
-  sendEmailConfirmationLink,
 };

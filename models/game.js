@@ -1,7 +1,22 @@
 "use strict";
 
-module.exports = (sequelize, DataTypes) => {
-  const Game = sequelize.define("Game", {
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "./index.js";
+import Game_User from "./game_user.js";
+import User from "./user.js";
+import Message from "./message.js";
+
+class Game extends Model {}
+
+Game.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
     language: {
       type: DataTypes.ENUM("ru", "en"),
       defaultValue: "ru",
@@ -22,7 +37,10 @@ module.exports = (sequelize, DataTypes) => {
     maxPlayers: {
       type: DataTypes.INTEGER,
     },
-    archived: { type: DataTypes.BOOLEAN, defaultValue: false },
+    archived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     validated: {
       type: DataTypes.ENUM("unknown", "yes", "no"),
       defaultValue: "unknown",
@@ -56,15 +74,25 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSONB,
       defaultValue: [],
     },
-  });
-  Game.associate = function (models) {
-    Game.belongsToMany(models.User, {
-      as: "users",
-      through: models.Game_User,
-    });
-    Game.hasMany(models.Message, {
-      as: "messages",
-    });
-  };
-  return Game;
-};
+  },
+  {
+    sequelize,
+    tableName: "Games",
+  }
+);
+
+Game.belongsToMany(User, {
+  as: "users",
+  through: Game_User,
+});
+User.belongsToMany(Game, {
+  as: "games",
+  through: Game_User,
+});
+
+Game.hasMany(Message, {
+  as: "messages",
+});
+Message.belongsTo(Game);
+
+export default Game;

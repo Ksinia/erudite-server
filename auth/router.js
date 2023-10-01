@@ -1,11 +1,12 @@
-const { Router } = require("express");
-const { toJWT } = require("./jwt");
-const { User, Sequelize } = require("../models");
-const bcrypt = require("bcrypt");
-const authMiddleware = require("../auth/middleware");
-const { LOGIN_SUCCESS } = require("../constants/outgoingMessageTypes");
+import { Router } from "express";
+import { toJWT } from "./jwt.js";
+import User from "../models/user.js";
+import { Sequelize } from "../models/index.js";
+import bcrypt from "bcrypt";
+import authMiddleware from "./middleware.js";
+import { LOGIN_SUCCESS } from "../constants/outgoingMessageTypes.js";
 
-async function login(res, next, name = null, password = null) {
+export async function login(res, next, name = null, password = null) {
   if (!name || !password) {
     res.status(400).send({
       message: "Please supply a valid name and password",
@@ -49,7 +50,7 @@ async function login(res, next, name = null, password = null) {
   }
 }
 
-const router = new Router();
+export const router = Router();
 
 router.post("/login", (req, res, next) => {
   const name = req.body.name.trim();
@@ -71,5 +72,3 @@ router.get("/profile", authMiddleware, async (req, res) => {
   const string = JSON.stringify(action);
   res.send(string);
 });
-
-module.exports = { router, login };

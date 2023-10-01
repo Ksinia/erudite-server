@@ -1,22 +1,25 @@
 "use strict";
 
-const { NOW } = require("sequelize");
+import { DataTypes, Model, NOW } from "sequelize";
+import { sequelize } from "./index.js";
 
-module.exports = (sequelize, DataTypes) => {
-  const Game_User = sequelize.define(
-    "Game_User",
-    {
-      visit: {
-        type: DataTypes.DATE,
-        defaultValue: NOW,
-        allowNull: false,
-      },
+class Game_User extends Model {}
+
+Game_User.init(
+  {
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
+    visit: {
+      type: DataTypes.DATE,
+      defaultValue: NOW,
+      allowNull: false,
     },
-    {
-      freezeTableName: true,
-      tableName: "Game_User",
-    }
-  );
+  },
+  {
+    sequelize,
+    freezeTableName: true,
+    tableName: "Game_User",
+  }
+);
 
-  return Game_User;
-};
+export default Game_User;

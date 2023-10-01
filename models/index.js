@@ -1,16 +1,14 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
-const Sequelize = require("sequelize");
-const Umzug = require("umzug");
+import Sequelize from "sequelize";
+import Umzug from "umzug";
 // workaround for https://github.com/sequelize/sequelize/issues/3781
-const pg = require("pg");
+import pg from "pg";
 delete pg.native;
+import configs from "../config/config.js";
 
-const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || "development";
-const config = require(__dirname + "/../config/config.json")[env];
+const config = configs[env];
 const db = {};
 
 let sequelize;
@@ -33,32 +31,13 @@ const umzug = new Umzug({
   },
   migrations: {
     params: [sequelize.getQueryInterface(), Sequelize],
-    path: path.join(__dirname, "../migrations"),
+    path: "./migrations",
   },
 });
 umzug.up();
 
-fs.readdirSync(__dirname)
-  .filter((file) => {
-    return (
-      file.indexOf(".") !== 0 && file !== basename && file.slice(-3) === ".js"
-    );
-  })
-  .forEach((file) => {
-    const model = require(path.join(__dirname, file))(
-      sequelize,
-      Sequelize.DataTypes
-    );
-    db[model.name] = model;
-  });
-
-Object.keys(db).forEach((modelName) => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
-});
-
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-module.exports = db;
+export { sequelize, Sequelize };
+export default db;

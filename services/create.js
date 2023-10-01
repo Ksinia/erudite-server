@@ -1,12 +1,14 @@
-const { User, Game } = require("../models");
+import Game from "../models/game.js";
+import User from "../models/user.js";
+
 /**
  * Creates a new game with current user as only player if playerIds are undefined
  * or with all users from playersIds, which is set
  * when user clicked 'play again with same players' in finished game
  * returns game object
  */
-module.exports = async (currentUser, maxPlayers, playersIds, language) => {
-  let users = [];
+export default async (currentUser, maxPlayers, playersIds, language) => {
+  let users;
   let phase = "waiting";
   if (playersIds) {
     users = await User.findAll({

@@ -1,9 +1,11 @@
-const { User, Game } = require("../models");
-const updateGame = require("./updateGame");
+import Game from "../models/game.js";
+import User from "../models/user.js";
+import updateGame from "./updateGame.js";
+
 /**
  * Adds the current user to the game
  */
-module.exports = async (currentUser, gameId) => {
+export default async (currentUser, gameId) => {
   const game = await Game.findByPk(gameId, {
     include: [
       {
@@ -13,7 +15,7 @@ module.exports = async (currentUser, gameId) => {
       },
     ],
   });
-  await game.addUsers(currentUser);
+  await game.addUser(currentUser);
   // check if game ready to start by reaching maxPlayers
   // after new player joined
   if (game.users.length + 1 === game.maxPlayers) {

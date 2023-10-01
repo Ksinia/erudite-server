@@ -1,8 +1,10 @@
-const { User, Game } = require("../models");
+import Game from "../models/game.js";
+import User from "../models/user.js";
+
 /**
  * Returns game object from db
  */
-module.exports = async (gameId) => {
+export default async (gameId) => {
   return Game.findByPk(gameId, {
     include: [
       {

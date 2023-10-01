@@ -1,26 +1,28 @@
-const { Message, User, Game } = require("./models");
-const { toData } = require("./auth/jwt");
-const {
+import Game from "./models/game.js";
+import User from "./models/user.js";
+import Message from "./models/message.js";
+import { toData } from "./auth/jwt.js";
+import {
   addPlayerClient,
-  removePlayerClient,
   getClientsByPlayerId,
-} = require("./socketClients");
-const {
+  removePlayerClient,
+} from "./socketClients.js";
+import {
   countAllMessagesInLobby,
   getAllMessagesInGame,
-} = require("./services/chat");
-const registerVisit = require("./services/visit");
-const { fetchGames } = require("./services/lobby");
-const {
-  NEW_MESSAGE,
-  MESSAGES_COUNT,
-  ALL_MESSAGES,
+} from "./services/chat.js";
+import registerVisit from "./services/visit.js";
+import { fetchGames } from "./services/lobby.js";
+import {
   ALL_GAMES,
+  ALL_MESSAGES,
   GAME_UPDATED,
   LOGIN_OR_SIGNUP_ERROR,
-} = require("./constants/outgoingMessageTypes");
-const fetchGame = require("./services/fetchGame");
-const { notify } = require("./services/notifications");
+  MESSAGES_COUNT,
+  NEW_MESSAGE,
+} from "./constants/outgoingMessageTypes.js";
+import fetchGame from "./services/fetchGame.js";
+import { notify } from "./services/notifications.js";
 
 const receiveSaveAndSendNewMessage = async (
   webSocketsServer,
@@ -29,7 +31,7 @@ const receiveSaveAndSendNewMessage = async (
 ) => {
   // store the message in DB
   try {
-    Message.create({
+    await Message.create({
       text: payload,
       name: socket.user.name,
       GameId: socket.gameId,
@@ -60,7 +62,7 @@ const receiveSaveAndSendNewMessage = async (
       usersOfThisGame
         .filter((user) => user.id !== socket.user.id)
         .map(async (user) => {
-          notify(user.id, {
+          await notify(user.id, {
             title: `New chat message`,
             message: `${socket.user.name} in game ${socket.gameId}: ${payload}`,
             gameId: socket.gameId,
@@ -100,7 +102,7 @@ const addUserToSocket = async (webSocketsServer, socket, jwt) => {
     try {
       const count = await countAllMessagesInLobby(user.id);
       socket.emit("message", { type: MESSAGES_COUNT, payload: count });
-      // if user was on a game page but not logged in and then he logs in we need to send him more full game object
+      // if user was on a game page but not logged in, and then he logs in we need to send him more full game object
       if (socket.gameId) {
         const game = await fetchGame(socket.gameId, user.id);
         socket.emit("message", {
@@ -167,7 +169,7 @@ const enterLobby = async (webSocketsServer, socket) => {
     console.log(error);
   }
 };
-module.exports = {
+export default {
   SEND_CHAT_MESSAGE: receiveSaveAndSendNewMessage,
   ADD_USER_TO_SOCKET: addUserToSocket,
   REMOVE_USER_FROM_SOCKET: removeUserFromSocket,

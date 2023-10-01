@@ -1,13 +1,35 @@
 "use strict";
 
-module.exports = (sequelize, DataTypes) => {
-  const Message = sequelize.define("Message", {
-    text: { type: DataTypes.STRING },
-    name: { type: DataTypes.STRING },
-  });
-  Message.associate = function (models) {
-    Message.belongsTo(models.User);
-    Message.belongsTo(models.Game);
-  };
-  return Message;
-};
+import User from "./user.js";
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "./index.js";
+
+class Message extends Model {}
+
+Message.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
+    text: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    tableName: "Messages",
+  }
+);
+
+Message.belongsTo(User);
+
+export default Message;

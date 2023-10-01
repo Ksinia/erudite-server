@@ -1,6 +1,9 @@
-const { Game, Sequelize, User } = require("../models");
-const { UPDATED_GAME_IN_LOBBY } = require("../constants/outgoingMessageTypes");
-const archivateOldGames = async () => {
+import Game from "../models/game.js";
+import User from "../models/user.js";
+import Sequelize from "sequelize";
+import { UPDATED_GAME_IN_LOBBY } from "../constants/outgoingMessageTypes.js";
+
+export const archiveOldGames = async () => {
   const date = new Date().setDate(new Date().getDate() - 7);
   const games = await Game.findAll({
     attributes: ["id", "updatedAt"],
@@ -15,7 +18,9 @@ const archivateOldGames = async () => {
     },
   });
   if (games.length > 0) {
-    Promise.all(games.map(async (el) => await el.update({ archived: true })));
+    await Promise.all(
+      games.map(async (el) => await el.update({ archived: true }))
+    );
   }
 };
 
@@ -23,7 +28,7 @@ const archivateOldGames = async () => {
  * Extracts properties needed for lobby from the game object
  * @returns action for updated game in lobby
  */
-const getUpdatedGameForLobby = (game) => {
+export const getUpdatedGameForLobby = (game) => {
   const {
     id,
     phase,
@@ -52,7 +57,7 @@ const getUpdatedGameForLobby = (game) => {
   };
 };
 
-const fetchGames = () => {
+export const fetchGames = () => {
   return Game.findAll({
     attributes: [
       "id",
@@ -79,5 +84,3 @@ const fetchGames = () => {
     ],
   });
 };
-
-module.exports = { archivateOldGames, getUpdatedGameForLobby, fetchGames };

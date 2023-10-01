@@ -62,8 +62,9 @@ function createLetterArray(qty) {
   const qtyArray = qty.split("-");
   return Array(parseInt(qtyArray[1])).fill(qtyArray[0]);
 }
+
 const letters = lettersQuantity.reduce((acc, char) => {
   return acc.concat(createLetterArray(char));
 }, []);
 
-module.exports = { letters, values };
+export default { letters, values };

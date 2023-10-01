@@ -1,22 +1,22 @@
-const { wordBonuses, letterBonuses } = require("../constants/bonuses");
-const { notify } = require("../services/notifications");
+import { letterBonuses, wordBonuses } from "../constants/bonuses.js";
+import { notify } from "./notifications.js";
 
-const shuffle = (arr) => {
+export const shuffle = (arr) => {
   return arr.sort(() => Math.random() - 0.5);
 };
 
-const getNextTurn = (game) => {
+export const getNextTurn = (game) => {
   return (game.turn + 1) % game.turnOrder.length;
 };
 
-const updateGameLetters = (game) => {
+export const updateGameLetters = (game) => {
   const currentUserId = game.turnOrder[game.turn];
   const currentUserLetters = game.letters[currentUserId];
   let requiredQty = 7 - currentUserLetters.length;
   if (game.letters.pot.length < requiredQty) {
     requiredQty = game.letters.pot.length;
   }
-  let newLetters = [];
+  const newLetters = [];
   while (newLetters.length !== requiredQty) {
     newLetters.push(
       game.letters.pot.splice(
@@ -40,7 +40,7 @@ const updateGameLetters = (game) => {
 // слово это вектор от ху до ху.
 // слова проверяем только для тех букв, которые не ходятся внутри этих векторов. Но только по
 // горзизонтали. Слова по вертикали ищем только после того,как нашли все слова по горизонтали.
-const getHorizontalWords = (board, previousBoard) => {
+export const getHorizontalWords = (board, previousBoard) => {
   return board.reduce((boardWords, row, yIndex) => {
     return boardWords.concat(
       row.reduce((lineWords, cell, xIndex) => {
@@ -95,7 +95,7 @@ const getHorizontalWords = (board, previousBoard) => {
   }, []);
 };
 
-const getWords = (newBoard, oldBoard) => {
+export const getWords = (newBoard, oldBoard) => {
   const hWords = getHorizontalWords(newBoard, oldBoard).map((wordObject) =>
     wordObject.word
       .map((letter) => {
@@ -122,7 +122,7 @@ const getWords = (newBoard, oldBoard) => {
   );
 };
 
-const rotate = (board) => {
+export const rotate = (board) => {
   return Array(15)
     .fill(null)
     .map((_, index) => board.map((row) => row[index]));
@@ -146,7 +146,7 @@ const countWordScore = (wordMultiplier, wordObject, previousBoard, values) => {
   );
 };
 
-const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
+export const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
   const horizontalWords = getHorizontalWords(board, previousBoard);
   const rotatedBoard = rotate(board);
   const rotatedPreviousBoard = rotate(previousBoard);
@@ -173,7 +173,7 @@ const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
 };
 
 // extract letters from all letters
-const substract = (arr, subarr) => {
+export const subtract = (arr, subarr) => {
   const tempSubarr = subarr.slice().sort();
   const tempArr = arr.slice().sort();
   return tempArr.reduce(
@@ -193,10 +193,10 @@ const substract = (arr, subarr) => {
   ).letters;
 };
 
-const giveLetters = (bag, userLetters, lettersToChange) => {
+export const giveLetters = (bag, userLetters, lettersToChange) => {
   const tempBag = shuffle(bag.slice().concat(lettersToChange));
   const requiredQty = lettersToChange.length;
-  let newLetters = [];
+  const newLetters = [];
   while (newLetters.length !== requiredQty) {
     newLetters.push(
       tempBag.splice(Math.floor(Math.random() * tempBag.length), 1)[0]
@@ -206,7 +206,7 @@ const giveLetters = (bag, userLetters, lettersToChange) => {
   return { bag: tempBag, userLetters: updatedUserLetters };
 };
 
-const getResult = (score, turns, userIds) => {
+export const getResult = (score, turns, userIds) => {
   const winScore = Object.keys(score).reduce(
     (acc, user) => {
       if (score[user] > 0 && score[user] > acc[0].score) {
@@ -329,32 +329,17 @@ const getHorizontalOrVerticalTurn = (
   );
 };
 
-const sendTurnNotification = (playerId, gameId) => {
+export const sendTurnNotification = (playerId, gameId) => {
   notify(playerId, {
     title: `Your turn in game ${gameId}!`,
     gameId,
   });
 };
 
-const sendDisapproveNotification = (playerId, gameId) => {
+export const sendDisapproveNotification = (playerId, gameId) => {
   notify(playerId, {
     title: `Your turn in game ${gameId} is not approved`,
     message: `Please undo your turn and make another one`,
     gameId,
   });
-};
-
-module.exports = {
-  shuffle,
-  getNextTurn,
-  updateGameLetters,
-  getHorizontalWords,
-  rotate,
-  turnWordsAndScore,
-  substract,
-  giveLetters,
-  getResult,
-  getWords,
-  sendTurnNotification,
-  sendDisapproveNotification,
 };

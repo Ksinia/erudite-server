@@ -1,6 +1,21 @@
 "use strict";
-module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define("User", {
+
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "./index.js";
+import Subscription from "./subscription.js";
+import Subscription_User from "./subscription_user.js";
+
+class User extends Model {}
+
+User.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -13,27 +28,27 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     password: { type: DataTypes.STRING, allowNull: false },
-    link: {
-      type: DataTypes.STRING,
-    },
+    link: { type: DataTypes.STRING },
     email: { type: DataTypes.STRING },
     notifiedAt: {
       type: DataTypes.DATE,
       defaultValue: "2020-02-22 21:27:29.422+00",
     },
     emailConfirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
-  });
+  },
+  {
+    sequelize,
+    tableName: "Users",
+  }
+);
 
-  User.associate = function (models) {
-    User.belongsToMany(models.Game, {
-      as: "games",
-      through: models.Game_User,
-    });
-    User.belongsToMany(models.Subscription, {
-      as: "subscriptions",
-      through: models.Subscription_User,
-    });
-  };
+User.belongsToMany(Subscription, {
+  as: "subscriptions",
+  through: Subscription_User,
+});
+Subscription.belongsToMany(User, {
+  as: "users",
+  through: Subscription_User,
+});
 
-  return User;
-};
+export default User;

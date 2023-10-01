@@ -1,6 +1,8 @@
-const webpush = require("web-push");
-const { Subscription, User, Subscription_User } = require("../models");
-const { clientUrl } = require("../constants/runtime");
+import webpush from "web-push";
+import Subscription from "../models/subscription.js";
+import Subscription_User from "../models/subscription_user.js";
+import User from "../models/user.js";
+import { clientUrl } from "../constants/runtime.js";
 
 webpush.setVapidDetails(
   clientUrl,
@@ -8,7 +10,7 @@ webpush.setVapidDetails(
   process.env.VAPI_KEY || "ZGlatY9qBu2xGgbuOt1dIrwXzSDE-jBb1pnxfiwQDcY" //TODO:  OOPS. Leaked key. But seriously don't do that. Generate new and save in heroku
 );
 
-async function addSubscription(userId, subscriptionDetails, userAgent) {
+export async function addSubscription(userId, subscriptionDetails, userAgent) {
   let subscription = await Subscription.findOne({
     where: {
       subscription: subscriptionDetails,
@@ -21,12 +23,12 @@ async function addSubscription(userId, subscriptionDetails, userAgent) {
     });
   }
   const user = await User.findByPk(userId);
-  await subscription.addUsers(user);
+  await subscription.addUser(user);
 
   return subscription;
 }
 
-async function notify(userId, { title, message, gameId } = {}) {
+export async function notify(userId, { title, message, gameId } = {}) {
   try {
     const subscriptions = await Subscription.findAll({
       include: [
@@ -69,8 +71,3 @@ async function notify(userId, { title, message, gameId } = {}) {
     console.error(e);
   }
 }
-
-module.exports = {
-  addSubscription,
-  notify,
-};

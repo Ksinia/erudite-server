@@ -1,9 +1,14 @@
-const { Message, Game, Sequelize, User, Game_User } = require("../models");
+import Game from "../models/game.js";
+import Game_User from "../models/game_user.js";
+import Message from "../models/message.js";
+import User from "../models/user.js";
+import { Sequelize } from "../models/index.js";
+
 /**
  * Show messages from waiting and ready games to everyone and from games with other
  * statuses only to participating players
  */
-const getAllMessagesInGame = async (gameId, playerId) => {
+export const getAllMessagesInGame = async (gameId, playerId) => {
   return Message.findAll({
     where: {
       GameId: gameId,
@@ -29,7 +34,7 @@ const getAllMessagesInGame = async (gameId, playerId) => {
   });
 };
 
-const countAllMessagesInLobby = async (userId) => {
+export const countAllMessagesInLobby = async (userId) => {
   const messagesCountList = await Game.findAll({
     attributes: ["id", [Sequelize.fn("COUNT", "*"), "messagesCount"]],
     include: [
@@ -72,8 +77,4 @@ const countAllMessagesInLobby = async (userId) => {
     acc[el.dataValues.id] = parseInt(el.dataValues.messagesCount);
     return acc;
   }, {});
-};
-module.exports = {
-  getAllMessagesInGame,
-  countAllMessagesInLobby,
 };
