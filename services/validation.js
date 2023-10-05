@@ -3,6 +3,8 @@ import { getNextTurn, turnWordsAndScore, updateGameLetters } from "./game.js";
 import lettersSets from "../constants/letterSets/index.js";
 import fetchGame from "./fetchGame.js";
 import updateGame from "./updateGame.js";
+import { sequelize } from "../models/index.js";
+import { QueryTypes } from "sequelize";
 
 /**
  * Updates game according to validation and returns updated game
@@ -40,19 +42,32 @@ export default async (currentUserId, gameId, validation) => {
         ];
       }
       const updatedGameLetters = updateGameLetters(game);
-      await updateGame(game, {
-        phase: "turn",
-        turn: newTurn,
-        activeUserId: game.turnOrder[newTurn],
-        letters: updatedGameLetters,
-        putLetters: [],
-        previousLetters: [],
-        score: updatedScore,
-        validated: "yes",
-        turns: updatedTurns,
-        wordsForValidation: [],
-        passedCount: 0,
-      });
+
+      // game.update didn't update score, so changed to sequelize.query
+      await sequelize.query(
+        `UPDATE "Games" SET "phase"=:phase,"turn"=:turn,"activeUserId" = :activeUserId,
+        "letters"=:letters, "putLetters" = :putLetters, "previousLetters"=:previousLetters,
+        "validated"=:validated,"turns"=:turns,"wordsForValidation"=:wordsForValidation,
+        "score"=:score, "passedCount" = :passedCount
+        WHERE "id" = :id`,
+        {
+          replacements: {
+            phase: "turn",
+            turn: newTurn,
+            activeUserId: game.turnOrder[newTurn],
+            letters: JSON.stringify(updatedGameLetters),
+            putLetters: JSON.stringify([]),
+            previousLetters: JSON.stringify([]),
+            score: JSON.stringify(updatedScore),
+            validated: "yes",
+            turns: JSON.stringify(updatedTurns),
+            wordsForValidation: JSON.stringify([]),
+            passedCount: 0,
+            id: game.id,
+          },
+          type: QueryTypes.UPDATE,
+        }
+      );
     } else if (validation === "no") {
       await updateGame(game, {
         validated: "no",
