@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "start": "NODE_ENV=development node --enable-source-maps dist/index.js",
+    "start": "node --enable-source-maps dist/index.js",
     "build": "mkdir -p dist && cp .env* ./dist/ && tsc || true",
     "dev": "NODE_ENV=development tsx watch index.ts",
     "db:makemigrations": "./node_modules/sequelize-auto-migrations/bin/makemigration.js",
