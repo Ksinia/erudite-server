@@ -3,7 +3,15 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "./index.js";
 
-class Subscription extends Model {}
+class Subscription extends Model {
+  declare id: number;
+  declare createdAt: Date;
+  declare updatedAt: Date;
+  declare subscription: object;
+  declare userAgent: string;
+  declare lastSuccess: Date;
+  declare failureCount: number;
+}
 
 Subscription.init(
   {

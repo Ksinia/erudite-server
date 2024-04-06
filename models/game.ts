@@ -6,7 +6,57 @@ import Game_User from "./game_user.js";
 import User from "./user.js";
 import Message from "./message.js";
 
-class Game extends Model {}
+enum Language {
+  "ru",
+  "en",
+}
+
+enum Validated {
+  "unknown",
+  "yes",
+  "no",
+}
+
+interface Turn {
+  words: { [key: string]: number }[];
+  score: number;
+  user: number;
+  changedLetters: boolean;
+}
+
+class Game extends Model {
+  declare previousLetters: string[];
+  declare id: number;
+  declare phase: string;
+  declare turnOrder: User["id"][];
+  declare turn: User["id"];
+  declare validated: Validated;
+  declare language: Language;
+  declare maxPlayers: number;
+  declare users: User[];
+  declare archived: boolean;
+  declare letters: { [key in User["id"] | "pot"]: string[] };
+  declare passedCount: number;
+  declare score: { [key in User["id"]]: number };
+  declare turns: Turn[];
+  declare result: {
+    winner: string[]; // TODO: it should be a number
+    longestWord: { word: string; user: number }[];
+    maxScoreWord: { word: string; value: number; user: number }[];
+    bestTurnByCount: { qty: number; turn: Turn; user: number }[];
+    bestTurnByValue: { score: number; turn: Turn; user: number }[];
+    neverChangedLetters: number[];
+  };
+  declare board: (string | null)[][];
+  declare previousBoard: (string | null)[][];
+  declare putLetters: string[];
+  declare lettersChanged: boolean;
+  declare createdAt: string;
+  declare updatedAt: string;
+  declare wordsForValidation: string[];
+  declare activeUserId: null | number;
+  declare setUsers: (users: User[]) => Promise<void>;
+}
 
 Game.init(
   {

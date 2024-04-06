@@ -4,7 +4,7 @@ import User from "../models/user.js";
 /**
  * Returns game object from db
  */
-export default async (gameId) => {
+export default async (gameId: number) => {
   return Game.findByPk(gameId, {
     include: [
       {

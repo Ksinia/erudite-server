@@ -8,7 +8,10 @@ import { Sequelize } from "../models/index.js";
  * Show messages from waiting and ready games to everyone and from games with other
  * statuses only to participating players
  */
-export const getAllMessagesInGame = async (gameId, playerId) => {
+export const getAllMessagesInGame = async (
+  gameId: number,
+  playerId: number
+) => {
   return Message.findAll({
     where: {
       GameId: gameId,
@@ -34,7 +37,7 @@ export const getAllMessagesInGame = async (gameId, playerId) => {
   });
 };
 
-export const countAllMessagesInLobby = async (userId) => {
+export const countAllMessagesInLobby = async (userId: number) => {
   const messagesCountList = await Game.findAll({
     attributes: ["id", [Sequelize.fn("COUNT", "*"), "messagesCount"]],
     include: [
