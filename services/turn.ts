@@ -2,13 +2,21 @@ import Game from "../models/game.js";
 import { getNextTurn, getResult, getWords, subtract } from "./game.js";
 import fetchGame from "./fetchGame.js";
 import updateGame from "./updateGame.js";
-import { DUPLICATED_WORDS } from "../constants/outgoingMessageTypes.js";
+import {
+  DUPLICATED_WORDS,
+  GAME_UPDATED,
+} from "../constants/outgoingMessageTypes.js";
 
 /**
  * Makes turn and returns updated game
  * or returns duplicated words action if there are duplicated words
  */
-export default async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
+export default async (
+  currentUserId: number,
+  gameId: number,
+  userBoard: string[][],
+  wildCardOnBoard: { [x: string]: { [x: string]: string } }
+): Promise<{ type: string; payload: { gameId: number; game: Game } }> => {
   const game = await Game.findByPk(gameId);
   // check if game is in turn phase and if it is current user's turn
   if (game.phase === "turn" && game.turnOrder[game.turn] === currentUserId) {
@@ -118,7 +126,8 @@ export default async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
         if (
           !userBoard.some((row, y) =>
             row.some(
-              (letter, x) => letter !== null && game.board[y][x] !== null
+              (letter: string, x) =>
+                letter !== null && game.board[y][x] !== null
             )
           )
         ) {
@@ -138,7 +147,7 @@ export default async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
           // if yes, don't update the game, send action with error as a response only
           const words = getWords(newBoard, game.board);
 
-          const duplicatedWords = words.filter((word) => {
+          const duplicatedWords = words.filter((word: string) => {
             return game.turns.some((turn) => {
               if (turn.words.length > 0) {
                 const listOfWords = turn.words.map((wordObject) =>
@@ -194,6 +203,11 @@ export default async (currentUserId, gameId, userBoard, wildCardOnBoard) => {
       // }
     }
   }
+
   // fetch game from db
-  return fetchGame(gameId);
+  const updatedGame = await fetchGame(gameId);
+  return {
+    type: GAME_UPDATED,
+    payload: { gameId, game: updatedGame },
+  };
 };

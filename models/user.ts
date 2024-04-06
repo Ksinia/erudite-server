@@ -5,7 +5,17 @@ import { sequelize } from "./index.js";
 import Subscription from "./subscription.js";
 import Subscription_User from "./subscription_user.js";
 
-class User extends Model {}
+class User extends Model {
+  declare id: number;
+  declare createdAt: Date;
+  declare updatedAt: Date;
+  declare name: string;
+  declare password: string;
+  declare link: string;
+  declare email: string;
+  declare notifiedAt: Date;
+  declare emailConfirmed: boolean;
+}
 
 User.init(
   {

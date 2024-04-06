@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { addSubscription } from "../services/notifications.js";
 import authMiddleware from "../auth/middleware.js";
+import { RequestWithUser } from "./game";
 
 const router = Router();
 
-router.post("/subscribe", authMiddleware, async (req, res) => {
+router.post("/subscribe", authMiddleware, async (req: RequestWithUser, res) => {
   const { subscription, userAgent } = req.body;
   const user = req.user;
   try {

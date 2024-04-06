@@ -7,7 +7,12 @@ import User from "../models/user.js";
  * when user clicked 'play again with same players' in finished game
  * returns game object
  */
-export default async (currentUser, maxPlayers, playersIds, language) => {
+export default async (
+  currentUser: User,
+  maxPlayers: number,
+  playersIds: number[],
+  language: string
+) => {
   let users = [];
   let phase = "waiting";
   if (playersIds) {
