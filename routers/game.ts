@@ -146,11 +146,12 @@ export default function factory(
           };
           await sendFinishedGameNotifications(gameId);
           webSocketsServer.to("lobby").emit("message", deleteGameAction);
+        } else {
+          const lobbyAction = getUpdatedGameForLobby(
+            updatedGameAction.payload.game
+          );
+          webSocketsServer.to("lobby").emit("message", lobbyAction);
         }
-        const lobbyAction = getUpdatedGameForLobby(
-          updatedGameAction.payload.game
-        );
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
 
         // every time after a turn we need to inform the next player about their turn
         sendTurnNotification(
