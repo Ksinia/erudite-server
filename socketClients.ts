@@ -1,11 +1,13 @@
+import { MySocket } from "./index";
+
 const clientsByPlayerId = {};
 
-export const getClientsByPlayerId = (playerId) => {
+export const getClientsByPlayerId = (playerId: number) => {
   return clientsByPlayerId[playerId] || [];
 };
 
-export const addPlayerClient = (socket) => {
-  const playerId = socket.playerId;
+export const addPlayerClient = (socket: MySocket) => {
+  const playerId = socket.data.playerId;
   if (playerId === -1) {
     return;
   }
@@ -13,8 +15,8 @@ export const addPlayerClient = (socket) => {
   clientsByPlayerId[playerId].push(socket);
 };
 
-export const removePlayerClient = (socket) => {
-  const playerId = socket.playerId;
+export const removePlayerClient = (socket: MySocket) => {
+  const playerId = socket.data.playerId;
   if (playerId === -1) {
     return;
   }

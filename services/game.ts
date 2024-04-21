@@ -216,7 +216,7 @@ export const getResult = (score, turns, userIds) => {
       }
       return acc;
     },
-    [{ score: 0 }]
+    [{ score: 0 } as { score: number; user: string }]
   );
   let winner = [];
   if (winScore[0].score > 0) {

@@ -5,6 +5,7 @@ import { Sequelize } from "../models/index.js";
 import bcrypt from "bcrypt";
 import authMiddleware from "./middleware.js";
 import { LOGIN_SUCCESS } from "../constants/outgoingMessageTypes.js";
+import { RequestWithUser } from "../routers/game";
 
 export async function login(res, next, name = null, password = null) {
   if (!name || !password) {
@@ -58,7 +59,7 @@ router.post("/login", (req, res, next) => {
   login(res, next, name, password);
 });
 
-router.get("/profile", authMiddleware, async (req, res) => {
+router.get("/profile", authMiddleware, async (req: RequestWithUser, res) => {
   const currentUser = req.user;
   const jwt = req.headers.authorization.split(" ")[1];
   const action = {

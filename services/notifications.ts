@@ -28,7 +28,10 @@ export async function addSubscription(userId, subscriptionDetails, userAgent) {
   return subscription;
 }
 
-export async function notify(userId, { title, message, gameId } = {}) {
+export async function notify(
+  userId: number,
+  { title, message = undefined, gameId }
+) {
   try {
     const subscriptions = await Subscription.findAll({
       include: [

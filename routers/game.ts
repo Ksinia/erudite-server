@@ -21,12 +21,9 @@ import {
   sendTurnNotification,
 } from "../services/game.js";
 import User from "../models/user.js";
-import { Server } from "socket.io";
-import { DefaultEventsMap } from "socket.io/dist/typed-events";
+import { MyServer } from "../index";
 
-export default function factory(
-  webSocketsServer: Server<DefaultEventsMap, DefaultEventsMap>
-) {
+export default function factory(webSocketsServer: MyServer) {
   const router = Router();
 
   router.post(
@@ -52,11 +49,12 @@ export default function factory(
   );
 
   router.put(
-    "/join",
+    "/join/:id",
     authMiddleware,
+    validateGameId,
     async (req: RequestWithAdditionalFields, res, next) => {
       const currentUser = req.user;
-      const gameId = req.body.gameId;
+      const gameId: number = req.gameId;
       try {
         const updatedGame = await joinGame(currentUser, gameId);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
@@ -65,7 +63,9 @@ export default function factory(
           type: GAME_UPDATED,
           payload: { gameId: updatedGame.id, game: updatedGame },
         };
-        webSocketsServer.to(gameId).emit("message", updatedGameAction);
+        webSocketsServer
+          .to(gameId.toString())
+          .emit("message", updatedGameAction);
         res.send(updatedGameAction);
       } catch (error) {
         next(error);
@@ -73,23 +73,30 @@ export default function factory(
     }
   );
 
-  router.post("/start", authMiddleware, async (req, res, nxt) => {
-    const gameId = req.body.gameId;
-    try {
-      const updatedGame = await startGame(gameId);
-      const updatedGameAction = {
-        type: GAME_UPDATED,
-        payload: { gameId, game: updatedGame },
-      };
-      webSocketsServer.to(gameId).emit("message", updatedGameAction);
-      const lobbyAction = getUpdatedGameForLobby(updatedGame);
-      webSocketsServer.to("lobby").emit("message", lobbyAction);
-      sendTurnNotification(updatedGame.activeUserId, gameId);
-      res.sendStatus(204);
-    } catch (error) {
-      nxt(error);
+  router.post(
+    "/start/:id",
+    authMiddleware,
+    validateGameId,
+    async (req: RequestWithGameId, res, nxt) => {
+      const gameId = req.gameId;
+      try {
+        const updatedGame = await startGame(gameId);
+        const updatedGameAction = {
+          type: GAME_UPDATED,
+          payload: { gameId, game: updatedGame },
+        };
+        webSocketsServer
+          .to(gameId.toString())
+          .emit("message", updatedGameAction);
+        const lobbyAction = getUpdatedGameForLobby(updatedGame);
+        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        sendTurnNotification(updatedGame.activeUserId, gameId);
+        res.sendStatus(204);
+      } catch (error) {
+        nxt(error);
+      }
     }
-  });
+  );
 
   router.get(
     "/game/:id",
@@ -137,7 +144,9 @@ export default function factory(
         };
         res.send(responseAction);
 
-        webSocketsServer.to(gameId).emit("message", updatedGameAction);
+        webSocketsServer
+          .to(gameId.toString())
+          .emit("message", updatedGameAction);
 
         if (updatedGameAction.payload.game.phase === "finished") {
           const deleteGameAction = {
@@ -186,7 +195,7 @@ export default function factory(
             game: updatedGame,
           },
         };
-        webSocketsServer.to(gameId).emit("message", action);
+        webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         if (validation === "no") {
@@ -216,7 +225,7 @@ export default function factory(
             game: updatedGame,
           },
         };
-        webSocketsServer.to(gameId).emit("message", action);
+        webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         res.sendStatus(204);
@@ -248,7 +257,7 @@ export default function factory(
             game: updatedGame,
           },
         };
-        webSocketsServer.to(gameId).emit("message", action);
+        webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         sendTurnNotification(updatedGame.activeUserId, gameId);

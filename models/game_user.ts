@@ -3,7 +3,11 @@
 import { DataTypes, Model, NOW } from "sequelize";
 import { sequelize } from "./index.js";
 
-class Game_User extends Model {}
+class Game_User extends Model {
+  declare createdAt: Date;
+  declare updatedAt: Date;
+  declare visit: Date;
+}
 
 Game_User.init(
   {

@@ -2,7 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { createServer } from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 
 import { originUrls, serverPort } from "./constants/runtime.js";
 import signupRouter from "./routers/user.js";
@@ -13,10 +13,43 @@ import { archiveOldGames } from "./services/lobby.js";
 import { sendActiveGameNotifications } from "./services/mail.js";
 import { removePlayerClient } from "./socketClients.js";
 import handlers from "./handlers.js";
+import User from "./models/user";
+
+interface ServerToClientEvents {
+  message: (message: { type: string; payload }) => void;
+}
+
+interface ClientToServerEvents {
+  message: (message: { type: string; payload }) => void;
+  disconnect: () => void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface InterServerEvents {}
+
+interface SocketData {
+  playerId: number;
+  gameId: number;
+  user: User;
+}
+
+export type MyServer = Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
+
+export type MySocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
 
 const app = express();
 const http = createServer(app);
-const webSocketsServer = new Server(http, {
+const webSocketsServer: MyServer = new Server(http, {
   path: "/socket",
   cors: {
     origin: originUrls,
@@ -37,7 +70,7 @@ app.use(gameRouter);
 app.use(pushRouter);
 
 webSocketsServer.on("connection", async (socket) => {
-  socket.playerId = -1;
+  socket.data.playerId = -1;
   socket.on("message", (message) => {
     handlers[message.type](webSocketsServer, socket, message.payload);
   });
