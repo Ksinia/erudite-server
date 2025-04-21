@@ -23,6 +23,11 @@ import {
 import User from "../models/user.js";
 import { MyServer } from "../index";
 
+interface RequestBody {
+  userBoard: string[][];
+  wildCardOnBoard: { [x: string]: { [x: string]: string } };
+}
+
 export default function factory(webSocketsServer: MyServer) {
   const router = Router();
 
@@ -121,11 +126,12 @@ export default function factory(webSocketsServer: MyServer) {
     "/game/:id/turn",
     authMiddleware,
     validateGameId,
+    validateRequestBody,
     async (req: RequestWithAdditionalFields, res, next) => {
       // get user from auth middleware
       const currentUserId = req.user.id;
       const gameId = req.gameId;
-      const { userBoard, wildCardOnBoard } = req.body;
+      const { userBoard, wildCardOnBoard } = req.body as RequestBody;
       try {
         const updatedGameAction = await makeTurn(
           currentUserId,
@@ -295,5 +301,50 @@ function validateGameId(
     return;
   }
   req.gameId = gameId;
+  next();
+}
+
+function validateRequestBody(
+  req: RequestWithAdditionalFields,
+  res: Response,
+  next: NextFunction
+) {
+  const body = req.body as RequestBody;
+
+  if (!body.userBoard || !Array.isArray(body.userBoard)) {
+    return res
+      .status(400)
+      .json({ error: "userBoard is required and must be an array" });
+  }
+
+  if ("wildCardOnBoard" in body) {
+    if (
+      typeof body.wildCardOnBoard !== "object" ||
+      body.wildCardOnBoard === null
+    ) {
+      return res
+        .status(400)
+        .json({ error: "wildCardOnBoard must be an object" });
+    }
+
+    for (const key in body.wildCardOnBoard) {
+      const innerObj = body.wildCardOnBoard[key];
+      if (typeof innerObj !== "object" || innerObj === null) {
+        return res
+          .status(400)
+          .json({ error: `wildCardOnBoard[${key}] must be an object` });
+      }
+
+      for (const innerKey in innerObj) {
+        if (typeof innerObj[innerKey] !== "string") {
+          return res.status(400).json({
+            error: `wildCardOnBoard[${key}][${innerKey}] must be a string`,
+          });
+        }
+      }
+    }
+  }
+
+  req.body = body as RequestBody;
   next();
 }

@@ -54,7 +54,7 @@ export async function login(res, next, name = null, password = null) {
 export const router = Router();
 
 router.post("/login", (req, res, next) => {
-  const name = req.body.name.trim();
+  const name = req.body.name?.trim();
   const password = req.body.password;
   login(res, next, name, password);
 });
