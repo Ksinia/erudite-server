@@ -162,7 +162,7 @@ const removeGameFromSocket = async (
     );
   } else {
     try {
-      await registerVisit(socket.data.gameId, socket.data.playerId);
+      await registerVisit(gameId, socket.data.playerId);
       socket.leave(gameId.toString());
       delete socket.data.gameId;
     } catch (error) {
