@@ -23,6 +23,7 @@ import {
 } from "./constants/outgoingMessageTypes.js";
 import fetchGame from "./services/fetchGame.js";
 import { notify } from "./services/notifications.js";
+import { storePushToken } from "./services/expoPush.js";
 import { MyServer, MySocket } from "./index";
 
 const receiveSaveAndSendNewMessage = async (
@@ -84,8 +85,19 @@ const receiveSaveAndSendNewMessage = async (
   }
 };
 
-const addUserToSocket = async (_: MyServer, socket: MySocket, jwt: string) => {
+const addUserToSocket = async (
+  _: MyServer,
+  socket: MySocket,
+  payload: string | { jwt: string; pushToken?: string }
+) => {
   let user = undefined;
+
+  // Handle both old (string) and new (object) payload formats
+  const jwt = typeof payload === "string" ? payload : payload.jwt;
+  const pushToken = typeof payload === "object" ? payload.pushToken : undefined;
+
+  console.log("addUserToSocket - JWT:", jwt, "PushToken:", pushToken);
+
   try {
     const data = toData(jwt);
     user = await User.findByPk(data.userId, {
@@ -100,6 +112,11 @@ const addUserToSocket = async (_: MyServer, socket: MySocket, jwt: string) => {
     socket.data.playerId = user.id;
     socket.data.user = user;
     addPlayerClient(socket);
+
+    // Store Expo push token if provided
+    if (pushToken) {
+      storePushToken(user.id, pushToken);
+    }
     try {
       const count = await countAllMessagesInLobby(user.id);
       socket.emit("message", { type: MESSAGES_COUNT, payload: count });

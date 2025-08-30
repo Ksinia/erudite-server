@@ -72,6 +72,11 @@ app.use(pushRouter);
 webSocketsServer.on("connection", async (socket) => {
   socket.data.playerId = -1;
   socket.on("message", (message) => {
+    if (!(message.type in handlers)) {
+      console.log("unhandled:", message);
+    } else {
+      console.log("handled:", message);
+    }
     handlers[message.type](webSocketsServer, socket, message.payload);
   });
   socket.on("disconnect", () => {
