@@ -68,6 +68,7 @@ const receiveSaveAndSendNewMessage = async (
             title: `New chat message`,
             message: `${socket.data.user.name} in game ${socket.data.gameId}: ${payload}`,
             gameId: socket.data.gameId,
+            type: "chat_message",
           });
           const clients = await Promise.all(getClientsByPlayerId(user.id));
           clients

@@ -31,7 +31,7 @@ export async function addSubscription(userId, subscriptionDetails, userAgent) {
 
 export async function notify(
   userId: number,
-  { title, message = undefined, gameId }
+  { title, message = undefined, gameId, type = undefined as string | undefined }
 ) {
   try {
     // First, try Expo push notification (for React Native clients)
@@ -43,7 +43,7 @@ export async function notify(
           title,
           body: message,
           data: {
-            type: gameId ? "game_update" : "general",
+            type: type || (gameId ? "game_update" : "general"),
             gameId: gameId,
           },
         });
