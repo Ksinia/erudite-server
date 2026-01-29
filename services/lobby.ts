@@ -3,16 +3,17 @@ import User from "../models/user.js";
 import Sequelize from "sequelize";
 import { UPDATED_GAME_IN_LOBBY } from "../constants/outgoingMessageTypes.js";
 
-function getCenterWord(board: (string | null)[][] | undefined): string {
-  if (!board || !board[7] || !board[7][7]) return "";
-  let startX = 7;
-  while (startX > 0 && board[7][startX - 1]) startX--;
-  let word = "";
-  for (let x = startX; x < 15 && board[7][x]; x++) {
-    const cell = board[7][x]!;
-    word += cell[cell.length - 1];
-  }
-  return word;
+function getFirstTurnWord(
+  turns: { words: { [key: string]: number }[] }[] | undefined
+): string {
+  if (!turns || turns.length === 0) return "";
+  const firstTurn = turns[0];
+  if (!firstTurn.words || firstTurn.words.length === 0) return "";
+  const words = firstTurn.words.map((w) =>
+    Object.keys(w)[0].replace(/\*/gi, "")
+  );
+  words.sort((a, b) => b.length - a.length || a.localeCompare(b));
+  return words[0] || "";
 }
 
 export const archiveOldGames = async () => {
@@ -62,7 +63,7 @@ export const getUpdatedGameForLobby = (game) => {
     maxPlayers,
     users,
     activeUserId,
-    centerWord: getCenterWord(game.board),
+    centerWord: getFirstTurnWord(game.turns),
   };
   return {
     type: UPDATED_GAME_IN_LOBBY,
@@ -81,7 +82,7 @@ export const fetchGames = async () => {
       "language",
       "maxPlayers",
       "activeUserId",
-      "board",
+      "turns",
     ],
     where: {
       phase: {
@@ -99,7 +100,7 @@ export const fetchGames = async () => {
   });
   return games.map((game) => {
     const json = game.toJSON();
-    const { board, ...rest } = json;
-    return { ...rest, centerWord: getCenterWord(board) };
+    const { turns, ...rest } = json;
+    return { ...rest, centerWord: getFirstTurnWord(turns) };
   });
 };
