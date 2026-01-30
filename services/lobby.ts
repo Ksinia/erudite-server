@@ -3,7 +3,7 @@ import User from "../models/user.js";
 import Sequelize from "sequelize";
 import { UPDATED_GAME_IN_LOBBY } from "../constants/outgoingMessageTypes.js";
 
-function getFirstTurnWord(
+export function getFirstTurnWord(
   turns: { words: { [key: string]: number }[] }[] | undefined
 ): string {
   if (!turns || turns.length === 0) return "";

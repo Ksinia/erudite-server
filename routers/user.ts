@@ -11,6 +11,7 @@ import {
   sendEmailConfirmationLink,
   sendPasswordResetLink,
 } from "../services/mail.js";
+import { getFirstTurnWord } from "../services/lobby.js";
 import { RequestWithUser } from "./game";
 
 const router = Router();
@@ -163,6 +164,7 @@ router.get(
           "language",
           "maxPlayers",
           "result",
+          "turns",
         ],
         include: [
           {
@@ -172,7 +174,12 @@ router.get(
           },
         ],
       });
-      res.send(games);
+      res.send(
+        games.map((game) => {
+          const { turns, ...rest } = game.toJSON();
+          return { ...rest, centerWord: getFirstTurnWord(turns) };
+        })
+      );
     } catch (error) {
       next(error);
     }
@@ -201,6 +208,7 @@ router.get(
           "maxPlayers",
           "turn",
           "activeUserId",
+          "turns",
         ],
         include: [
           {
@@ -217,7 +225,12 @@ router.get(
           return -1;
         }
       });
-      res.send(sortedGames);
+      res.send(
+        sortedGames.map((game) => {
+          const { turns, ...rest } = game.toJSON();
+          return { ...rest, centerWord: getFirstTurnWord(turns) };
+        })
+      );
     } catch (error) {
       next(error);
     }
