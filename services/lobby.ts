@@ -7,8 +7,10 @@ function getFirstTurnWord(
   turns: { words: { [key: string]: number }[] }[] | undefined
 ): string {
   if (!turns || turns.length === 0) return "";
-  const firstTurn = turns[0];
-  if (!firstTurn.words || firstTurn.words.length === 0) return "";
+  const firstTurn = turns.find(
+    (t) => !t.changedLetters && t.words && t.words.length > 0
+  );
+  if (!firstTurn) return "";
   const words = firstTurn.words.map((w) =>
     Object.keys(w)[0].replace(/\*/gi, "")
   );
