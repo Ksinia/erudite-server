@@ -29,7 +29,8 @@ import { MyServer, MySocket } from "./index";
 const receiveSaveAndSendNewMessage = async (
   webSocketsServer: MyServer,
   socket: MySocket,
-  payload: string
+  payload: string,
+  ack?: (response: { success: boolean; error?: string }) => void
 ) => {
   // store the message in DB
   try {
@@ -47,8 +48,11 @@ const receiveSaveAndSendNewMessage = async (
         name: socket.data.user.name,
       },
     });
+    if (ack) ack({ success: true });
   } catch (error) {
     console.log("problem storing and sending chat message:", error);
+    if (ack) ack({ success: false, error: "Failed to send message" });
+    return; // Don't continue with notifications if message failed
   }
   try {
     const usersOfThisGame = await User.findAll({
