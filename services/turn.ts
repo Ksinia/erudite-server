@@ -147,7 +147,13 @@ export default async (
           // if yes, don't update the game, send action with error as a response only
           const words = getWords(newBoard, game.board);
 
-          const duplicatedWords = words.filter((word: string) => {
+          // Check for duplicate words within current turn
+          const duplicatesWithinTurn = words.filter(
+            (word, index) => words.indexOf(word) !== index
+          );
+
+          // Check for duplicate words from previous turns
+          const duplicatesFromPreviousTurns = words.filter((word: string) => {
             return game.turns.some((turn) => {
               if (turn.words.length > 0) {
                 const listOfWords = turn.words.map((wordObject) =>
@@ -157,7 +163,14 @@ export default async (
               }
             });
           });
-          if (duplicatedWords && duplicatedWords.length > 0) {
+
+          const duplicatedWords = [
+            ...new Set([
+              ...duplicatesWithinTurn,
+              ...duplicatesFromPreviousTurns,
+            ]),
+          ];
+          if (duplicatedWords.length > 0) {
             return {
               type: DUPLICATED_WORDS,
               payload: duplicatedWords,
