@@ -19,19 +19,19 @@ const router = Router();
 router.post("/signup", async (req, res, next) => {
   if (!req.body.password) {
     res.status(400).send({
-      message: "Password should not be empty",
+      message: "password_empty",
     });
     return;
   }
   if (!req.body.name) {
     res.status(400).send({
-      message: "Name should not be empty",
+      message: "name_empty",
     });
     return;
   }
   if (!req.body.email) {
     res.status(400).send({
-      message: "Email should not be empty",
+      message: "email_empty",
     });
     return;
   }
@@ -65,9 +65,9 @@ router.post("/signup", async (req, res, next) => {
     next(error);
   }
   if (userWithSameName) {
-    res.status(400).send({ message: "This name is already in use" });
+    res.status(400).send({ message: "name_taken" });
   } else if (userWithSameEmail) {
-    res.status(400).send({ message: "This email is already in use" });
+    res.status(400).send({ message: "email_taken" });
   } else {
     try {
       const newUser = await User.create(userData);
@@ -114,16 +114,19 @@ router.post(
 router.post("/generate-link", async (req, res, next) => {
   if (!req.body.name) {
     res.status(400).send({
-      message: "Name should not be empty",
+      message: "field_empty",
     });
   } else {
     try {
+      const input = req.body.name;
       const currentUser = await User.findOne({
-        where: { name: req.body.name },
+        where: {
+          [Sequelize.Op.or]: [{ name: input }, { email: input }],
+        },
       });
       if (!currentUser) {
         res.status(400).send({
-          message: "User with that name does not exist",
+          message: "user_not_found",
         });
       } else {
         const shortTermJwt = toJWT({ userId: currentUser.id }, true);

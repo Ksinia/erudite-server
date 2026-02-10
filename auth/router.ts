@@ -10,20 +10,22 @@ import { RequestWithUser } from "../routers/game";
 export async function login(res, next, name = null, password = null) {
   if (!name || !password) {
     res.status(400).send({
-      message: "Please supply a valid name and password",
+      message: "login_fields_empty",
     });
   } else {
     try {
+      const input = name.toLowerCase();
       const currentUser = await User.findOne({
         where: {
-          name: {
-            [Sequelize.Op.iLike]: name.toLowerCase(),
-          },
+          [Sequelize.Op.or]: [
+            { name: { [Sequelize.Op.iLike]: input } },
+            { email: { [Sequelize.Op.iLike]: input } },
+          ],
         },
       });
       if (!currentUser) {
         res.status(400).send({
-          message: "User with that name does not exist",
+          message: "user_not_found",
         });
       }
       // 2. use bcrypt.compareSync to check the password against the stored hash
@@ -42,7 +44,7 @@ export async function login(res, next, name = null, password = null) {
         res.send(string);
       } else {
         res.status(400).send({
-          message: "Password was incorrect",
+          message: "wrong_password",
         });
       }
     } catch (err) {
