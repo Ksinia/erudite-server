@@ -97,7 +97,7 @@ router.post(
     const currentUser = req.user;
     if (!req.body.password) {
       res.status(400).send({
-        message: "Password should not be empty",
+        message: "password_empty",
       });
     } else {
       const newPassword = bcrypt.hashSync(req.body.password, 10);
