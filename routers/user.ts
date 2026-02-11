@@ -111,6 +111,49 @@ router.post(
   }
 );
 
+router.post(
+  "/change-email",
+  authMiddleware,
+  async (req: RequestWithUser, res, next) => {
+    const currentUser = req.user;
+    const newEmail = req.body.email?.trim();
+    if (!newEmail) {
+      if (currentUser.email) {
+        res.status(400).send({ message: "email_empty" });
+      } else {
+        res.status(400).send({ message: "email_empty" });
+      }
+      return;
+    }
+    if (!newEmail.includes("@")) {
+      res.status(400).send({ message: "invalid_email" });
+      return;
+    }
+    try {
+      const userWithSameEmail = await User.findOne({
+        where: {
+          email: { [Sequelize.Op.iLike]: newEmail.toLowerCase() },
+          id: { [Sequelize.Op.ne]: currentUser.id },
+        },
+      });
+      if (userWithSameEmail) {
+        res.status(400).send({ message: "email_taken" });
+        return;
+      }
+      await currentUser.update({ email: newEmail, emailConfirmed: false });
+      const shortTermJwt = toJWT(
+        { userId: currentUser.id, email: newEmail },
+        true
+      );
+      const link = `${clientUrl}/confirm-email?jwt=${shortTermJwt}`;
+      sendEmailConfirmationLink(currentUser, link);
+      res.send({ email: newEmail });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 router.post("/generate-link", async (req, res, next) => {
   if (!req.body.name) {
     res.status(400).send({

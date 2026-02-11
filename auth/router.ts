@@ -37,6 +37,7 @@ export async function login(res, next, name = null, password = null) {
           payload: {
             id: currentUser.id,
             name: currentUser.name,
+            email: currentUser.email || "",
             jwt: jwt,
           },
         };
@@ -69,6 +70,7 @@ router.get("/profile", authMiddleware, async (req: RequestWithUser, res) => {
     payload: {
       id: currentUser.id,
       name: currentUser.name,
+      email: currentUser.email || "",
       jwt: jwt,
     },
   };
