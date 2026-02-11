@@ -132,9 +132,14 @@ router.post("/generate-link", async (req, res, next) => {
         const shortTermJwt = toJWT({ userId: currentUser.id }, true);
         const link = `${clientUrl}/user?jwt=${shortTermJwt}`;
         if (currentUser.email) {
-          await sendPasswordResetLink(currentUser, link);
-          await currentUser.update({ link });
-          res.send("Link sent");
+          try {
+            await sendPasswordResetLink(currentUser, link);
+            await currentUser.update({ link });
+            res.send("Link sent");
+          } catch (err) {
+            console.error("Failed to send password reset email:", err);
+            res.status(500).send({ message: "send_failed" });
+          }
         } else {
           await currentUser.update({ link });
           res.send("Link generated");

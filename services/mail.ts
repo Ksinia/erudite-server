@@ -1,24 +1,20 @@
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
 import Game from "../models/game.js";
 import User from "../models/user.js";
 import Game_User from "../models/game_user.js";
 import Sequelize from "sequelize";
 import { notify } from "./notifications.js";
-import { clientUrl, email, sendgridApiKey } from "../constants/runtime.js";
+import { clientUrl, fromEmail, resendApiKey } from "../constants/runtime.js";
 
-// using Twilio SendGrid's v3 Node.js Library
-// https://github.com/sendgrid/sendgrid-nodejs
-sgMail.setApiKey(sendgridApiKey);
+const resend = new Resend(resendApiKey);
 
 const mail = (to, subject, text) => {
-  const msg = {
-    to,
-    from: email,
-    subject,
-    text,
-    // html: "<strong>and easy to do anywhere, even with Node.js</strong>",
-  };
-  sgMail.send(msg).catch((err) => console.error(err));
+  resend.emails
+    .send({ from: fromEmail, to, subject, text })
+    .then(({ error }) => {
+      if (error) console.error(error);
+    })
+    .catch((err) => console.error(err));
 };
 
 export const sendFinishedGameNotifications = async (gameId) => {
@@ -130,7 +126,13 @@ export const sendActiveGameNotifications = async () => {
 export const sendPasswordResetLink = async (user, link) => {
   const subject = `${user.name}, Erudite password recovery`;
   const text = `Hi ${user.name},\n\nYou can reset your password here: ${link}`;
-  mail(user.email, subject, text);
+  const { error } = await resend.emails.send({
+    from: fromEmail,
+    to: user.email,
+    subject,
+    text,
+  });
+  if (error) throw new Error(error.message);
 };
 
 export const sendEmailConfirmationLink = (user, link) => {
