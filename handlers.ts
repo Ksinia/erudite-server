@@ -26,12 +26,28 @@ import { notify } from "./services/notifications.js";
 import { storePushToken } from "./services/expoPush.js";
 import { MyServer, MySocket } from "./index";
 
+const BOT_TRIGGER_TEXT = "бот ходи";
+const BOT_TRIGGER_USER_ID = 1;
+
 const receiveSaveAndSendNewMessage = async (
   webSocketsServer: MyServer,
   socket: MySocket,
   payload: string,
   ack?: (response: { success: boolean; error?: string }) => void
 ) => {
+  if (
+    socket.data.user.id === BOT_TRIGGER_USER_ID &&
+    payload.trim().toLowerCase() === BOT_TRIGGER_TEXT
+  ) {
+    webSocketsServer
+      .to(socket.data.gameId.toString())
+      .emit("message", {
+        type: "BOT_TRIGGER",
+        payload: { gameId: socket.data.gameId },
+      });
+    if (ack) ack({ success: true });
+    return;
+  }
   // store the message in DB
   try {
     await Message.create({
