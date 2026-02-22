@@ -23,7 +23,8 @@ export default async (currentUserId, gameId, lettersToChange) => {
     const updatedBagAndUserLetters = giveLetters(
       game.letters.pot,
       remainingLetters,
-      lettersToChange
+      lettersToChange,
+      currentUserId
     );
     const updatedUserLetters = updatedBagAndUserLetters.userLetters;
     const updatedPot = updatedBagAndUserLetters.bag;

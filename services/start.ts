@@ -1,6 +1,6 @@
 import Game from "../models/game.js";
 import User from "../models/user.js";
-import { shuffle } from "./game.js";
+import { shuffle, drawBalancedLetters, BALANCED_USER_ID } from "./game.js";
 import lettersSets from "../constants/letterSets/index.js";
 import updateGame from "./updateGame.js";
 
@@ -23,10 +23,14 @@ export default async (gameId) => {
     if (!acc[user.id]) {
       acc[user.id] = [];
     }
-    while (acc[user.id].length !== 7) {
-      acc[user.id].push(
-        acc.pot.splice(Math.floor(Math.random() * acc.pot.length), 1)[0]
-      );
+    if (user.id === BALANCED_USER_ID) {
+      acc[user.id] = drawBalancedLetters(acc.pot, 7);
+    } else {
+      while (acc[user.id].length !== 7) {
+        acc[user.id].push(
+          acc.pot.splice(Math.floor(Math.random() * acc.pot.length), 1)[0]
+        );
+      }
     }
     return acc;
   }, acc);

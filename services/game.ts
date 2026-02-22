@@ -1,8 +1,72 @@
 import { letterBonuses, wordBonuses } from "../constants/bonuses.js";
 import { notify } from "./notifications.js";
 
+export const BALANCED_USER_ID = 3;
+
+const VOWELS = new Set([
+  "а", "е", "и", "о", "у", "э", "ю", "я", "ы",
+  "a", "e", "i", "o", "u",
+]);
+const NEUTRAL_LETTERS = new Set(["*", "ъ", "ь"]);
+
 export const shuffle = (arr) => {
   return arr.sort(() => Math.random() - 0.5);
+};
+
+export const drawBalancedLetters = (pot, count, existingLetters = []) => {
+  const n = Math.min(count, pot.length);
+  if (n <= 0) return [];
+
+  let handVowels = 0;
+  let handCons = 0;
+  existingLetters.forEach((letter) => {
+    if (VOWELS.has(letter)) handVowels++;
+    else if (!NEUTRAL_LETTERS.has(letter)) handCons++;
+  });
+
+  const vowelIdx = [];
+  const consIdx = [];
+  const neutralIdx = [];
+  pot.forEach((letter, i) => {
+    if (NEUTRAL_LETTERS.has(letter)) neutralIdx.push(i);
+    else if (VOWELS.has(letter)) vowelIdx.push(i);
+    else consIdx.push(i);
+  });
+
+  shuffle(vowelIdx);
+  shuffle(consIdx);
+  shuffle(neutralIdx);
+
+  const totalLetters = existingLetters.length + n;
+  const potTotal = vowelIdx.length + consIdx.length + neutralIdx.length;
+  const potVowelRatio = potTotal > 0 ? vowelIdx.length / potTotal : 0.5;
+  const targetTotalV = Math.round(totalLetters * Math.max(potVowelRatio, 2 / 7));
+  let wantV = Math.max(0, Math.min(targetTotalV - handVowels, n));
+  let wantC = n - wantV;
+
+  wantV = Math.min(wantV, vowelIdx.length);
+  wantC = Math.min(wantC, consIdx.length);
+  if (wantV + wantC < n) wantV = Math.min(n - wantC, vowelIdx.length);
+  if (wantV + wantC < n) wantC = Math.min(n - wantV, consIdx.length);
+
+  const picked = [
+    ...vowelIdx.slice(0, wantV),
+    ...consIdx.slice(0, wantC),
+    ...neutralIdx.slice(0, n - wantV - wantC),
+  ];
+
+  if (picked.length < n) {
+    const used = new Set(picked);
+    const rest = [];
+    for (let i = 0; i < pot.length; i++) {
+      if (!used.has(i)) rest.push(i);
+    }
+    shuffle(rest);
+    picked.push(...rest.slice(0, n - picked.length));
+  }
+
+  picked.sort((a, b) => b - a);
+  return picked.map((i) => pot.splice(i, 1)[0]);
 };
 
 export const getNextTurn = (game) => {
@@ -16,14 +80,19 @@ export const updateGameLetters = (game) => {
   if (game.letters.pot.length < requiredQty) {
     requiredQty = game.letters.pot.length;
   }
-  const newLetters = [];
-  while (newLetters.length !== requiredQty) {
-    newLetters.push(
-      game.letters.pot.splice(
-        Math.floor(Math.random() * game.letters.pot.length),
-        1
-      )[0]
-    );
+  let newLetters;
+  if (currentUserId === BALANCED_USER_ID) {
+    newLetters = drawBalancedLetters(game.letters.pot, requiredQty, currentUserLetters);
+  } else {
+    newLetters = [];
+    while (newLetters.length !== requiredQty) {
+      newLetters.push(
+        game.letters.pot.splice(
+          Math.floor(Math.random() * game.letters.pot.length),
+          1
+        )[0]
+      );
+    }
   }
   const updatedUserLetters = currentUserLetters.concat(newLetters);
   const updatedGameLetters = {
@@ -193,14 +262,19 @@ export const subtract = (arr, subarr) => {
   ).letters;
 };
 
-export const giveLetters = (bag, userLetters, lettersToChange) => {
+export const giveLetters = (bag, userLetters, lettersToChange, userId?) => {
   const tempBag = shuffle(bag.slice().concat(lettersToChange));
   const requiredQty = lettersToChange.length;
-  const newLetters = [];
-  while (newLetters.length !== requiredQty) {
-    newLetters.push(
-      tempBag.splice(Math.floor(Math.random() * tempBag.length), 1)[0]
-    );
+  let newLetters;
+  if (userId === BALANCED_USER_ID) {
+    newLetters = drawBalancedLetters(tempBag, requiredQty, userLetters);
+  } else {
+    newLetters = [];
+    while (newLetters.length !== requiredQty) {
+      newLetters.push(
+        tempBag.splice(Math.floor(Math.random() * tempBag.length), 1)[0]
+      );
+    }
   }
   const updatedUserLetters = userLetters.concat(newLetters);
   return { bag: tempBag, userLetters: updatedUserLetters };
