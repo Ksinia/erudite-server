@@ -39,12 +39,10 @@ const receiveSaveAndSendNewMessage = async (
     socket.data.user.id === BOT_TRIGGER_USER_ID &&
     payload.trim().toLowerCase() === BOT_TRIGGER_TEXT
   ) {
-    webSocketsServer
-      .to(socket.data.gameId.toString())
-      .emit("message", {
-        type: "BOT_TRIGGER",
-        payload: { gameId: socket.data.gameId },
-      });
+    webSocketsServer.to(socket.data.gameId.toString()).emit("message", {
+      type: "BOT_TRIGGER",
+      payload: { gameId: socket.data.gameId },
+    });
     if (ack) ack({ success: true });
     return;
   }

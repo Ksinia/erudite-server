@@ -4,8 +4,20 @@ import { notify } from "./notifications.js";
 export const BALANCED_USER_ID = 3;
 
 const VOWELS = new Set([
-  "а", "е", "и", "о", "у", "э", "ю", "я", "ы",
-  "a", "e", "i", "o", "u",
+  "а",
+  "е",
+  "и",
+  "о",
+  "у",
+  "э",
+  "ю",
+  "я",
+  "ы",
+  "a",
+  "e",
+  "i",
+  "o",
+  "u",
 ]);
 const NEUTRAL_LETTERS = new Set(["*", "ъ", "ь"]);
 
@@ -18,10 +30,8 @@ export const drawBalancedLetters = (pot, count, existingLetters = []) => {
   if (n <= 0) return [];
 
   let handVowels = 0;
-  let handCons = 0;
   existingLetters.forEach((letter) => {
     if (VOWELS.has(letter)) handVowels++;
-    else if (!NEUTRAL_LETTERS.has(letter)) handCons++;
   });
 
   const vowelIdx = [];
@@ -40,7 +50,9 @@ export const drawBalancedLetters = (pot, count, existingLetters = []) => {
   const totalLetters = existingLetters.length + n;
   const potTotal = vowelIdx.length + consIdx.length + neutralIdx.length;
   const potVowelRatio = potTotal > 0 ? vowelIdx.length / potTotal : 0.5;
-  const targetTotalV = Math.round(totalLetters * Math.max(potVowelRatio, 2 / 7));
+  const targetTotalV = Math.round(
+    totalLetters * Math.max(potVowelRatio, 2 / 7)
+  );
   let wantV = Math.max(0, Math.min(targetTotalV - handVowels, n));
   let wantC = n - wantV;
 
@@ -82,7 +94,11 @@ export const updateGameLetters = (game) => {
   }
   let newLetters;
   if (currentUserId === BALANCED_USER_ID) {
-    newLetters = drawBalancedLetters(game.letters.pot, requiredQty, currentUserLetters);
+    newLetters = drawBalancedLetters(
+      game.letters.pot,
+      requiredQty,
+      currentUserLetters
+    );
   } else {
     newLetters = [];
     while (newLetters.length !== requiredQty) {
