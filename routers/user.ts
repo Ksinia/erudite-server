@@ -16,6 +16,8 @@ import { RequestWithUser } from "./game";
 
 const router = Router();
 
+const SHARED_EMAIL = "none@example.com";
+
 router.post("/signup", async (req, res, next) => {
   if (!req.body.password) {
     res.status(400).send({
@@ -53,16 +55,20 @@ router.post("/signup", async (req, res, next) => {
     next(error);
   }
   let userWithSameEmail = null;
-  try {
-    userWithSameEmail = await User.findOne({
-      where: {
-        email: {
-          [Sequelize.Op.iLike]: req.body.email.toLowerCase(),
+  const emailIsShared =
+    req.body.email && req.body.email.toLowerCase() === SHARED_EMAIL;
+  if (!emailIsShared) {
+    try {
+      userWithSameEmail = await User.findOne({
+        where: {
+          email: {
+            [Sequelize.Op.iLike]: req.body.email.toLowerCase(),
+          },
         },
-      },
-    });
-  } catch (error) {
-    next(error);
+      });
+    } catch (error) {
+      next(error);
+    }
   }
   if (userWithSameName) {
     res.status(400).send({ message: "name_taken" });
@@ -130,15 +136,17 @@ router.post(
       return;
     }
     try {
-      const userWithSameEmail = await User.findOne({
-        where: {
-          email: { [Sequelize.Op.iLike]: newEmail.toLowerCase() },
-          id: { [Sequelize.Op.ne]: currentUser.id },
-        },
-      });
-      if (userWithSameEmail) {
-        res.status(400).send({ message: "email_taken" });
-        return;
+      if (newEmail.toLowerCase() !== SHARED_EMAIL) {
+        const userWithSameEmail = await User.findOne({
+          where: {
+            email: { [Sequelize.Op.iLike]: newEmail.toLowerCase() },
+            id: { [Sequelize.Op.ne]: currentUser.id },
+          },
+        });
+        if (userWithSameEmail) {
+          res.status(400).send({ message: "email_taken" });
+          return;
+        }
       }
       await currentUser.update({ email: newEmail, emailConfirmed: false });
       const shortTermJwt = toJWT(
