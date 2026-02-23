@@ -168,6 +168,7 @@ const addGameToSocket = async (
   socket: MySocket,
   gameId: number
 ) => {
+  if (!gameId) return;
   socket.leave("lobby");
   socket.join(gameId.toString());
   socket.data.gameId = gameId;
