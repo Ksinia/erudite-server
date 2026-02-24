@@ -83,11 +83,7 @@ app.use(loginRouter);
 app.use(gameRouter);
 app.use(pushRouter);
 
-const UNAUTHENTICATED_HANDLERS = new Set([
-  "ADD_USER_TO_SOCKET",
-  "REMOVE_USER_FROM_SOCKET",
-  "REMOVE_GAME_FROM_SOCKET",
-]);
+const HANDLERS_REQUIRING_AUTH = new Set(["SEND_CHAT_MESSAGE"]);
 
 webSocketsServer.on("connection", async (socket) => {
   socket.data.playerId = -1;
@@ -97,7 +93,7 @@ webSocketsServer.on("connection", async (socket) => {
       return;
     }
     console.log("handled:", message);
-    if (!UNAUTHENTICATED_HANDLERS.has(message.type) && !socket.data.user) {
+    if (HANDLERS_REQUIRING_AUTH.has(message.type) && !socket.data.user) {
       console.log("rejected unauthenticated message:", message.type);
       socket.emit("message", {
         type: LOGIN_OR_SIGNUP_ERROR,
