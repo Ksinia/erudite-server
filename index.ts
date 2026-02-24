@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 
@@ -57,10 +58,22 @@ const webSocketsServer: MyServer = new Server(http, {
 });
 
 const bodyParserMiddleware = bodyParser.json();
-const corsMiddleware = cors();
+const corsMiddleware = cors({ origin: originUrls });
+
+const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "too_many_requests" },
+});
 
 app.use(corsMiddleware);
 app.use(bodyParserMiddleware);
+
+app.post("/login", authRateLimit);
+app.post("/signup", authRateLimit);
+app.post("/generate-link", authRateLimit);
 
 const gameRouter = gameRouterFactory(webSocketsServer);
 
