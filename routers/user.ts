@@ -347,12 +347,24 @@ router.post(
     }
     try {
       removePushToken(currentUser.id);
-      const activeGames = await Game.findAll({
+      const userGames = await Game.findAll({
         where: {
           phase: { [Sequelize.Op.not]: "finished" },
           archived: false,
-          turnOrder: { [Sequelize.Op.contains]: currentUser.id },
         },
+        include: [
+          {
+            model: User,
+            as: "users",
+            attributes: ["id"],
+            where: { id: currentUser.id },
+            required: true,
+          },
+        ],
+        attributes: ["id"],
+      });
+      const activeGames = await Game.findAll({
+        where: { id: userGames.map((g) => g.id) },
         include: [{ model: User, as: "users", attributes: ["id"] }],
       });
       await Promise.all(
