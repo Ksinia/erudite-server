@@ -1,6 +1,7 @@
 import Game from "./models/game.js";
 import User from "./models/user.js";
 import Message from "./models/message.js";
+import BlockedUser from "./models/blocked_user.js";
 import { toData } from "./auth/jwt.js";
 import {
   addPlayerClient,
@@ -54,14 +55,23 @@ const receiveSaveAndSendNewMessage = async (
       GameId: socket.data.gameId,
       UserId: socket.data.user.id,
     });
-    webSocketsServer.to(socket.data.gameId.toString()).emit("message", {
+    const messagePayload = {
       type: NEW_MESSAGE,
       payload: {
         userId: socket.data.playerId,
         text: payload,
         name: socket.data.user.name,
       },
-    });
+    };
+    const room = webSocketsServer.sockets.adapter.rooms.get(socket.data.gameId.toString());
+    if (room) {
+      for (const socketId of room) {
+        const targetSocket = webSocketsServer.sockets.sockets.get(socketId);
+        if (targetSocket && !targetSocket.data.blockedUserIds?.has(socket.data.user.id)) {
+          targetSocket.emit("message", messagePayload);
+        }
+      }
+    }
     if (ack) ack({ success: true });
   } catch (error) {
     console.log("problem storing and sending chat message:", error);
@@ -138,6 +148,12 @@ const addUserToSocket = async (
     socket.data.playerId = user.id;
     socket.data.user = user;
     addPlayerClient(socket);
+
+    const blockedRows = await BlockedUser.findAll({
+      where: { UserId: user.id },
+      attributes: ["BlockedUserId"],
+    });
+    socket.data.blockedUserIds = new Set(blockedRows.map((r) => r.BlockedUserId));
 
     // Store Expo push token if provided
     if (pushToken) {
@@ -226,6 +242,18 @@ const enterLobby = async (_: MyServer, socket: MySocket) => {
     console.log(error);
   }
 };
+export const updateBlockedUserIds = async (userId: number) => {
+  const blockedRows = await BlockedUser.findAll({
+    where: { UserId: userId },
+    attributes: ["BlockedUserId"],
+  });
+  const blockedIds = new Set(blockedRows.map((r) => r.BlockedUserId));
+  const sockets = getClientsByPlayerId(userId);
+  for (const s of sockets) {
+    s.data.blockedUserIds = blockedIds;
+  }
+};
+
 export default {
   SEND_CHAT_MESSAGE: receiveSaveAndSendNewMessage,
   ADD_USER_TO_SOCKET: addUserToSocket,

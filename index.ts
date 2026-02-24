@@ -33,6 +33,7 @@ interface SocketData {
   playerId: number;
   gameId: number;
   user: User;
+  blockedUserIds: Set<number>;
 }
 
 export type MyServer = Server<

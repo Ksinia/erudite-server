@@ -135,6 +135,16 @@ export const sendPasswordResetLink = async (user, link) => {
   if (error) throw new Error(error.message);
 };
 
+export const sendReportEmail = (reporterName, messageText, senderName, gameId) => {
+  const subject = `Erudite: message reported by ${reporterName}`;
+  const text =
+    `Reporter: ${reporterName}\n` +
+    `Message sender: ${senderName}\n` +
+    `Game: ${gameId}\n\n` +
+    `Message text:\n${messageText}`;
+  mail("ksenia@ksinia.net", subject, text);
+};
+
 export const sendEmailConfirmationLink = (user, link) => {
   const subject = `${user.name}, Erudite email confirmation`;
   const text = `Hi ${user.name},\n\nPlease confirm your email by clicking this link: ${link}`;

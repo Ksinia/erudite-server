@@ -10,10 +10,13 @@ import { clientUrl } from "../constants/runtime.js";
 import {
   sendEmailConfirmationLink,
   sendPasswordResetLink,
+  sendReportEmail,
 } from "../services/mail.js";
 import { getFirstTurnWord } from "../services/lobby.js";
 import { removePushToken } from "../services/expoPush.js";
 import Message from "../models/message.js";
+import BlockedUser from "../models/blocked_user.js";
+import { updateBlockedUserIds } from "../handlers.js";
 import { RequestWithUser } from "./game";
 
 const router = Router();
@@ -397,6 +400,69 @@ router.post(
         link: null,
         emailConfirmed: false,
       });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/block-user",
+  authMiddleware,
+  async (req: RequestWithUser, res, next) => {
+    const currentUser = req.user;
+    const blockedUserId = req.body.userId;
+    if (!blockedUserId) {
+      res.status(400).send({ message: "field_empty" });
+      return;
+    }
+    if (blockedUserId === currentUser.id) {
+      res.status(400).send({ message: "cannot_block_self" });
+      return;
+    }
+    try {
+      await BlockedUser.findOrCreate({
+        where: { UserId: currentUser.id, BlockedUserId: blockedUserId },
+      });
+      updateBlockedUserIds(currentUser.id);
+      res.status(201).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete(
+  "/block-user/:id",
+  authMiddleware,
+  async (req: RequestWithUser, res, next) => {
+    const currentUser = req.user;
+    const blockedUserId = parseInt(req.params.id);
+    try {
+      await BlockedUser.destroy({
+        where: { UserId: currentUser.id, BlockedUserId: blockedUserId },
+      });
+      updateBlockedUserIds(currentUser.id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/report-message",
+  authMiddleware,
+  async (req: RequestWithUser, res, next) => {
+    const currentUser = req.user;
+    const { messageText, messageSenderName, gameId } = req.body;
+    if (!messageText || !messageSenderName) {
+      res.status(400).send({ message: "field_empty" });
+      return;
+    }
+    try {
+      sendReportEmail(currentUser.name, messageText, messageSenderName, gameId);
       res.status(204).send();
     } catch (error) {
       next(error);

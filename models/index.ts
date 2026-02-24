@@ -32,9 +32,43 @@ const umzug = new Umzug({
   migrations: {
     params: [sequelize.getQueryInterface(), Sequelize],
     path: "./migrations",
+    pattern: /\.ts$/,
   },
 });
-umzug.up();
+const existingMigrations = [
+  "01-init.ts", "02-noname.ts", "03-noname.ts", "04-noname.ts",
+  "05-noname.ts", "06-noname.ts", "07-noname.ts", "08-noname.ts",
+  "09-noname.ts", "10-noname.ts", "11-language.ts", "12-noname.ts",
+  "13-noname.ts", "14-noname.ts", "15-noname.ts", "16-noname.ts",
+  "17-noname.ts", "18-noname.ts", "19-remove-rooms.ts", "20-noname.ts",
+  "21-add-visit-column.ts", "22-noname.ts", "23-noname.ts", "24-noname.ts",
+  "25-jsonb.ts", "26-active-user.ts", "27-subscription.ts",
+  "28-add-email-confirmed.ts",
+];
+
+const seedMigrations = async () => {
+  await sequelize.query(
+    `CREATE TABLE IF NOT EXISTS "SequelizeMeta" (name VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY)`
+  );
+  await sequelize.query(
+    `DELETE FROM "SequelizeMeta" WHERE name LIKE '%.js'`
+  );
+  for (const name of existingMigrations) {
+    await sequelize.query(
+      `INSERT INTO "SequelizeMeta" (name) VALUES (:name) ON CONFLICT DO NOTHING`,
+      { replacements: { name } }
+    );
+  }
+};
+
+seedMigrations()
+  .then(() => umzug.up())
+  .then((migrations) => {
+    if (migrations.length > 0) {
+      console.log("Migrations applied:", migrations.map((m) => m.file));
+    }
+  })
+  .catch((err) => console.error("Migration failed:", err));
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
