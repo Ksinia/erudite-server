@@ -125,7 +125,14 @@ const addUserToSocket = async (
   } catch (error) {
     console.log("problem retrieving user:", error);
     // TODO: remove jwt from local storage on fe
-    socket.emit("message", { type: LOGIN_OR_SIGNUP_ERROR, payload: error });
+    const errorMessage =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    socket.emit("message", {
+      type: LOGIN_OR_SIGNUP_ERROR,
+      payload: errorMessage,
+    });
   }
   if (user) {
     socket.data.playerId = user.id;

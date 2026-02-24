@@ -14,6 +14,7 @@ import { archiveOldGames } from "./services/lobby.js";
 import { sendActiveGameNotifications } from "./services/mail.js";
 import { removePlayerClient } from "./socketClients.js";
 import handlers from "./handlers.js";
+import { LOGIN_OR_SIGNUP_ERROR } from "./constants/outgoingMessageTypes.js";
 import User from "./models/user";
 
 interface ServerToClientEvents {
@@ -82,13 +83,28 @@ app.use(loginRouter);
 app.use(gameRouter);
 app.use(pushRouter);
 
+const UNAUTHENTICATED_HANDLERS = new Set([
+  "ADD_USER_TO_SOCKET",
+  "REMOVE_USER_FROM_SOCKET",
+  "REMOVE_GAME_FROM_SOCKET",
+]);
+
 webSocketsServer.on("connection", async (socket) => {
   socket.data.playerId = -1;
   socket.on("message", (message, ack) => {
     if (!(message.type in handlers)) {
       console.log("unhandled:", message);
-    } else {
-      console.log("handled:", message);
+      return;
+    }
+    console.log("handled:", message);
+    if (!UNAUTHENTICATED_HANDLERS.has(message.type) && !socket.data.user) {
+      console.log("rejected unauthenticated message:", message.type);
+      socket.emit("message", {
+        type: LOGIN_OR_SIGNUP_ERROR,
+        payload: "session_expired",
+      });
+      if (ack) ack({ success: false, error: "Not authenticated" });
+      return;
     }
     handlers[message.type](webSocketsServer, socket, message.payload, ack);
   });
