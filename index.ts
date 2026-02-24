@@ -16,6 +16,7 @@ import { removePlayerClient } from "./socketClients.js";
 import handlers from "./handlers.js";
 import { LOGIN_OR_SIGNUP_ERROR } from "./constants/outgoingMessageTypes.js";
 import User from "./models/user";
+import { migrationsReady } from "./models/index.js";
 
 interface ServerToClientEvents {
   message: (message: { type: string; payload }) => void;
@@ -111,7 +112,9 @@ webSocketsServer.on("connection", async (socket) => {
 });
 
 http.listen(serverPort, () => console.log(`Listening on port: ${serverPort}`));
-archiveOldGames();
-setInterval(archiveOldGames, 1000 * 60 * 60 * 24);
-sendActiveGameNotifications();
-setInterval(sendActiveGameNotifications, 1000 * 60 * 60 * 24);
+migrationsReady.then(() => {
+  archiveOldGames();
+  setInterval(archiveOldGames, 1000 * 60 * 60 * 24);
+  sendActiveGameNotifications();
+  setInterval(sendActiveGameNotifications, 1000 * 60 * 60 * 24);
+});

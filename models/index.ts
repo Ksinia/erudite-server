@@ -50,25 +50,30 @@ const seedMigrations = async () => {
   await sequelize.query(
     `CREATE TABLE IF NOT EXISTS "SequelizeMeta" (name VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY)`
   );
-  await sequelize.query(
-    `DELETE FROM "SequelizeMeta" WHERE name LIKE '%.js'`
+  const [rows] = await sequelize.query(
+    `SELECT COUNT(*) as count FROM "SequelizeMeta"`
   );
-  for (const name of existingMigrations) {
+  const hasExistingMigrations = parseInt((rows as { count: string }[])[0].count) > 0;
+  if (hasExistingMigrations) {
     await sequelize.query(
-      `INSERT INTO "SequelizeMeta" (name) VALUES (:name) ON CONFLICT DO NOTHING`,
-      { replacements: { name } }
+      `DELETE FROM "SequelizeMeta" WHERE name LIKE '%.js'`
     );
+    for (const name of existingMigrations) {
+      await sequelize.query(
+        `INSERT INTO "SequelizeMeta" (name) VALUES (:name) ON CONFLICT DO NOTHING`,
+        { replacements: { name } }
+      );
+    }
   }
 };
 
-seedMigrations()
+export const migrationsReady = seedMigrations()
   .then(() => umzug.up())
   .then((migrations) => {
     if (migrations.length > 0) {
       console.log("Migrations applied:", migrations.map((m) => m.file));
     }
-  })
-  .catch((err) => console.error("Migration failed:", err));
+  });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
