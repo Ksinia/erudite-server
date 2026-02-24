@@ -3,3 +3,4 @@
 .env.*.local
 /scripts/
 /dist/
+TODO-auth.md
