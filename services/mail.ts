@@ -142,7 +142,7 @@ export const sendReportEmail = (reporterName, messageText, senderName, gameId) =
     `Message sender: ${senderName}\n` +
     `Game: ${gameId}\n\n` +
     `Message text:\n${messageText}`;
-  mail("ksenia@ksinia.net", subject, text);
+  mail("xsenia.gulyaeva@gmail.com", subject, text);
 };
 
 export const sendEmailConfirmationLink = (user, link) => {
