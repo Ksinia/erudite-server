@@ -17,6 +17,7 @@ import { removePushToken } from "../services/expoPush.js";
 import Message from "../models/message.js";
 import BlockedUser from "../models/blocked_user.js";
 import { updateBlockedUserIds } from "../handlers.js";
+import appleSignin from "apple-signin-auth";
 import { RequestWithUser } from "./game";
 
 const router = Router();
@@ -336,17 +337,38 @@ router.post(
   authMiddleware,
   async (req: RequestWithUser, res, next) => {
     const currentUser = req.user;
-    if (!req.body.password) {
-      res.status(400).send({ message: "password_empty" });
-      return;
-    }
-    const passwordCorrect = bcrypt.compareSync(
-      req.body.password,
-      currentUser.password
-    );
-    if (!passwordCorrect) {
-      res.status(401).send({ message: "wrong_password" });
-      return;
+    if (currentUser.appleId) {
+      const { identityToken } = req.body;
+      if (!identityToken) {
+        res.status(400).send({ message: "apple_signin_failed" });
+        return;
+      }
+      try {
+        const payload = await appleSignin.verifyIdToken(identityToken, {
+          audience: "com.xsenia.erudite",
+          ignoreExpiration: false,
+        });
+        if (payload.sub !== currentUser.appleId) {
+          res.status(401).send({ message: "apple_signin_failed" });
+          return;
+        }
+      } catch {
+        res.status(401).send({ message: "apple_signin_failed" });
+        return;
+      }
+    } else {
+      if (!req.body.password) {
+        res.status(400).send({ message: "password_empty" });
+        return;
+      }
+      const passwordCorrect = bcrypt.compareSync(
+        req.body.password,
+        currentUser.password
+      );
+      if (!passwordCorrect) {
+        res.status(401).send({ message: "wrong_password" });
+        return;
+      }
     }
     try {
       removePushToken(currentUser.id);
@@ -399,6 +421,7 @@ router.post(
         password: randomPassword,
         link: null,
         emailConfirmed: false,
+        appleId: null,
       });
       res.status(204).send();
     } catch (error) {

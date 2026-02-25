@@ -15,6 +15,7 @@ class User extends Model {
   declare email: string;
   declare notifiedAt: Date;
   declare emailConfirmed: boolean;
+  declare appleId: string | null;
 }
 
 User.init(
@@ -45,6 +46,7 @@ User.init(
       defaultValue: "2020-02-22 21:27:29.422+00",
     },
     emailConfirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
+    appleId: { type: DataTypes.STRING, allowNull: true, unique: true },
   },
   {
     sequelize,

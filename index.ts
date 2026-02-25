@@ -9,6 +9,7 @@ import { originUrls, serverPort } from "./constants/runtime.js";
 import signupRouter from "./routers/user.js";
 import pushRouter from "./routers/push.js";
 import { router as loginRouter } from "./auth/router.js";
+import appleAuthRouter from "./auth/apple.js";
 import gameRouterFactory from "./routers/game.js";
 import { archiveOldGames } from "./services/lobby.js";
 import { sendActiveGameNotifications } from "./services/mail.js";
@@ -77,11 +78,13 @@ app.use(bodyParserMiddleware);
 app.post("/login", authRateLimit);
 app.post("/signup", authRateLimit);
 app.post("/generate-link", authRateLimit);
+app.post("/auth/apple", authRateLimit);
 
 const gameRouter = gameRouterFactory(webSocketsServer);
 
 app.use(signupRouter);
 app.use(loginRouter);
+app.use(appleAuthRouter);
 app.use(gameRouter);
 app.use(pushRouter);
 

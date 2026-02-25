@@ -39,6 +39,7 @@ export async function login(res, next, name = null, password = null) {
             name: currentUser.name,
             email: currentUser.email || "",
             jwt: jwt,
+            authMethod: currentUser.appleId ? "apple" : "password",
           },
         };
         const string = JSON.stringify(action);
@@ -72,6 +73,7 @@ router.get("/profile", authMiddleware, async (req: RequestWithUser, res) => {
       name: currentUser.name,
       email: currentUser.email || "",
       jwt: jwt,
+      authMethod: currentUser.appleId ? "apple" : "password",
     },
   };
   const string = JSON.stringify(action);

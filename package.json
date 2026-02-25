@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/Ksinia/erudit-server#readme",
   "dependencies": {
+    "apple-signin-auth": "^2.0.0",
     "bcrypt": "^5.0.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",

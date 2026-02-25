@@ -63,11 +63,16 @@ const receiveSaveAndSendNewMessage = async (
         name: socket.data.user.name,
       },
     };
-    const room = webSocketsServer.sockets.adapter.rooms.get(socket.data.gameId.toString());
+    const room = webSocketsServer.sockets.adapter.rooms.get(
+      socket.data.gameId.toString()
+    );
     if (room) {
       for (const socketId of room) {
         const targetSocket = webSocketsServer.sockets.sockets.get(socketId);
-        if (targetSocket && !targetSocket.data.blockedUserIds?.has(socket.data.user.id)) {
+        if (
+          targetSocket &&
+          !targetSocket.data.blockedUserIds?.has(socket.data.user.id)
+        ) {
           targetSocket.emit("message", messagePayload);
         }
       }
@@ -153,7 +158,9 @@ const addUserToSocket = async (
       where: { UserId: user.id },
       attributes: ["BlockedUserId"],
     });
-    socket.data.blockedUserIds = new Set(blockedRows.map((r) => r.BlockedUserId));
+    socket.data.blockedUserIds = new Set(
+      blockedRows.map((r) => r.BlockedUserId)
+    );
 
     // Store Expo push token if provided
     if (pushToken) {

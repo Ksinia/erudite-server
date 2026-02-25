@@ -135,7 +135,12 @@ export const sendPasswordResetLink = async (user, link) => {
   if (error) throw new Error(error.message);
 };
 
-export const sendReportEmail = (reporterName, messageText, senderName, gameId) => {
+export const sendReportEmail = (
+  reporterName,
+  messageText,
+  senderName,
+  gameId
+) => {
   const subject = `Erudite: message reported by ${reporterName}`;
   const text =
     `Reporter: ${reporterName}\n` +
