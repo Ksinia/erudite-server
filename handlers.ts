@@ -36,6 +36,10 @@ const receiveSaveAndSendNewMessage = async (
   payload: string,
   ack?: (response: { success: boolean; error?: string }) => void
 ) => {
+  if (!socket.data.gameId) {
+    if (ack) ack({ success: false, error: "Not in a game" });
+    return;
+  }
   if (
     socket.data.user.id === BOT_TRIGGER_USER_ID &&
     payload.trim().toLowerCase() === BOT_TRIGGER_TEXT

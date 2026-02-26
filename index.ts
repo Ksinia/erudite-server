@@ -53,6 +53,7 @@ export type MySocket = Socket<
 >;
 
 const app = express();
+app.set("trust proxy", 1);
 const http = createServer(app);
 const webSocketsServer: MyServer = new Server(http, {
   path: "/socket",
