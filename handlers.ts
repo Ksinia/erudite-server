@@ -204,6 +204,9 @@ const addGameToSocket = async (
 ) => {
   if (!gameId) return;
   socket.leave("lobby");
+  if (socket.data.gameId) {
+    socket.leave(socket.data.gameId.toString());
+  }
   socket.join(gameId.toString());
   socket.data.gameId = gameId;
   try {
