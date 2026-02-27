@@ -17,10 +17,6 @@ const router = Router();
 
 router.post("/auth/apple", async (req, res) => {
   const { identityToken, fullName, email } = req.body;
-  console.log(
-    "Apple sign-in request body:",
-    JSON.stringify({ fullName, email })
-  );
 
   if (!identityToken) {
     res.status(400).send({ message: "field_empty" });
