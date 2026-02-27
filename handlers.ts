@@ -37,6 +37,7 @@ const receiveSaveAndSendNewMessage = async (
   ack?: (response: { success: boolean; error?: string }) => void
 ) => {
   if (!socket.data.gameId) {
+    console.log("chat: no gameId on socket, player:", socket.data.playerId);
     if (ack) ack({ success: false, error: "Not in a game" });
     return;
   }
