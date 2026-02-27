@@ -6,6 +6,7 @@ import { toJWT } from "./jwt.js";
 import User from "../models/user.js";
 import { Sequelize } from "../models/index.js";
 import { LOGIN_SUCCESS } from "../constants/outgoingMessageTypes.js";
+import { anonymizeUser } from "../services/userDeletion.js";
 
 const APPLE_AUDIENCE = ["com.xsenia.erudite"];
 if (process.env.APPLE_SERVICE_ID) {
@@ -79,6 +80,46 @@ router.post("/auth/apple", async (req, res) => {
   } catch (err) {
     console.error("Apple sign-in error:", err);
     res.status(400).send({ message: "apple_signin_failed" });
+  }
+});
+
+router.post("/webhooks/apple", async (req, res) => {
+  try {
+    const { events } = await appleSignin.verifyWebhookToken(req.body.payload, {
+      audience: APPLE_AUDIENCE,
+    });
+
+    const user = await User.findOne({ where: { appleId: events.sub } });
+    if (!user) {
+      console.log("Apple webhook: no user found for sub", events.sub);
+      res.sendStatus(200);
+      return;
+    }
+
+    switch (events.type) {
+      case "consent-revoked":
+      case "account-delete":
+        console.log(`Apple webhook: ${events.type} for user ${user.id}`);
+        await anonymizeUser(user.id);
+        break;
+      case "email-disabled":
+        console.log(`Apple webhook: email-disabled for user ${user.id}`);
+        await user.update({ email: null, emailConfirmed: false });
+        break;
+      case "email-enabled":
+        console.log(`Apple webhook: email-enabled for user ${user.id}`);
+        if (events.email) {
+          await user.update({ email: events.email, emailConfirmed: true });
+        }
+        break;
+      default:
+        console.log("Apple webhook: unhandled event type", events.type);
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Apple webhook error:", err);
+    res.sendStatus(200);
   }
 });
 

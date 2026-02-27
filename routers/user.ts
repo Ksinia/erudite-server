@@ -13,8 +13,7 @@ import {
   sendReportEmail,
 } from "../services/mail.js";
 import { getFirstTurnWord } from "../services/lobby.js";
-import { removePushToken } from "../services/expoPush.js";
-import Message from "../models/message.js";
+import { anonymizeUser } from "../services/userDeletion.js";
 import BlockedUser from "../models/blocked_user.js";
 import { updateBlockedUserIds } from "../handlers.js";
 import appleSignin from "apple-signin-auth";
@@ -371,58 +370,7 @@ router.post(
       }
     }
     try {
-      removePushToken(currentUser.id);
-      const userGames = await Game.findAll({
-        where: {
-          phase: { [Sequelize.Op.not]: "finished" },
-          archived: false,
-        },
-        include: [
-          {
-            model: User,
-            as: "users",
-            attributes: ["id"],
-            where: { id: currentUser.id },
-            required: true,
-          },
-        ],
-        attributes: ["id"],
-      });
-      const activeGames = await Game.findAll({
-        where: { id: userGames.map((g) => g.id) },
-        include: [{ model: User, as: "users", attributes: ["id"] }],
-      });
-      await Promise.all(
-        activeGames.map(async (game) => {
-          if (game.phase === "waiting" || game.phase === "ready") {
-            await game.removeUser(currentUser);
-            const remainingCount = game.users.length - 1;
-            if (remainingCount === 0) {
-              await game.update({ archived: true });
-            } else if (
-              game.phase === "ready" &&
-              remainingCount < game.maxPlayers
-            ) {
-              await game.update({ phase: "waiting" });
-            }
-          } else {
-            await game.update({ archived: true });
-          }
-        })
-      );
-      await Message.update(
-        { name: "[deleted]" },
-        { where: { UserId: currentUser.id } }
-      );
-      const randomPassword = bcrypt.hashSync(crypto.randomUUID(), 10);
-      await currentUser.update({
-        name: `[deleted_${currentUser.id}]`,
-        email: null,
-        password: randomPassword,
-        link: null,
-        emailConfirmed: false,
-        appleId: null,
-      });
+      await anonymizeUser(currentUser.id);
       res.status(204).send();
     } catch (error) {
       next(error);

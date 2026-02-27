@@ -56,7 +56,7 @@ class Game extends Model {
   declare wordsForValidation: string[];
   declare activeUserId: null | number;
   declare setUsers: (users: User[]) => Promise<void>;
-  declare removeUser: (user: User) => Promise<void>;
+  declare removeUser: (userId: number) => Promise<void>;
 }
 
 Game.init(
