@@ -81,9 +81,11 @@ const receiveSaveAndSendNewMessage = async (
         }
       }
     }
+    console.log("chat ack:", ack ? "calling with success" : "no ack callback");
     if (ack) ack({ success: true });
   } catch (error) {
     console.log("problem storing and sending chat message:", error);
+    console.log("chat ack:", ack ? "calling with failure" : "no ack callback");
     if (ack) ack({ success: false, error: "Failed to send message" });
     return; // Don't continue with notifications if message failed
   }
