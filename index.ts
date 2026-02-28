@@ -9,7 +9,7 @@ import { originUrls, serverPort } from "./constants/runtime.js";
 import signupRouter from "./routers/user.js";
 import pushRouter from "./routers/push.js";
 import { router as loginRouter } from "./auth/router.js";
-import appleAuthRouter from "./auth/apple.js";
+import appleAuthRouterFactory from "./auth/apple.js";
 import gameRouterFactory from "./routers/game.js";
 import { archiveOldGames } from "./services/lobby.js";
 import { sendActiveGameNotifications } from "./services/mail.js";
@@ -82,6 +82,7 @@ app.post("/generate-link", authRateLimit);
 app.post("/auth/apple", authRateLimit);
 
 const gameRouter = gameRouterFactory(webSocketsServer);
+const appleAuthRouter = appleAuthRouterFactory(webSocketsServer);
 
 app.use(signupRouter);
 app.use(loginRouter);
