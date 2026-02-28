@@ -17,26 +17,40 @@ export async function anonymizeUser(
 ) {
   removePushToken(userId);
 
-  const userGames = await Game.findAll({
-    where: {
-      phase: { [Sequelize.Op.not]: "finished" },
-      archived: false,
-    },
-    include: [
-      {
-        model: User,
-        as: "users",
-        attributes: ["id"],
-        where: { id: userId },
-        required: true,
+  let userGames;
+  try {
+    userGames = await Game.findAll({
+      where: {
+        phase: { [Sequelize.Op.not]: "finished" },
+        archived: false,
       },
-    ],
-    attributes: ["id"],
-  });
+      include: [
+        {
+          model: User,
+          as: "users",
+          attributes: ["id"],
+          where: { id: userId },
+          required: true,
+        },
+      ],
+      attributes: ["id"],
+    });
+  } catch (err) {
+    console.error("anonymizeUser: error querying userGames:", err);
+    userGames = [];
+  }
+  console.log(
+    `anonymizeUser(${userId}): userGames=${userGames.map((g) => g.id)}`
+  );
   const activeGames = await Game.findAll({
     where: { id: userGames.map((g) => g.id) },
     include: [{ model: User, as: "users", attributes: ["id"] }],
   });
+  console.log(
+    `anonymizeUser(${userId}): activeGames=${activeGames.map(
+      (g) => `${g.id}(${g.phase},users=${g.users.length})`
+    )}`
+  );
   await Promise.all(
     activeGames.map(async (game) => {
       if (game.phase === "waiting" || game.phase === "ready") {
