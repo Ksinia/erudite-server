@@ -17,40 +17,27 @@ export async function anonymizeUser(
 ) {
   removePushToken(userId);
 
-  let userGames;
-  try {
-    userGames = await Game.findAll({
-      where: {
-        phase: { [Sequelize.Op.not]: "finished" },
-        archived: false,
+  const userGames = await Game.findAll({
+    where: {
+      phase: { [Sequelize.Op.not]: "finished" },
+      archived: false,
+    },
+    include: [
+      {
+        model: User,
+        as: "users",
+        attributes: ["id"],
+        where: { id: userId },
+        required: true,
       },
-      include: [
-        {
-          model: User,
-          as: "users",
-          attributes: ["id"],
-          where: { id: userId },
-          required: true,
-        },
-      ],
-      attributes: ["id"],
-    });
-  } catch (err) {
-    console.error("anonymizeUser: error querying userGames:", err);
-    userGames = [];
-  }
-  console.log(
-    `anonymizeUser(${userId}): userGames=${userGames.map((g) => g.id)}`
-  );
+    ],
+    attributes: ["id"],
+  });
   const activeGames = await Game.findAll({
     where: { id: userGames.map((g) => g.id) },
     include: [{ model: User, as: "users", attributes: ["id"] }],
   });
-  console.log(
-    `anonymizeUser(${userId}): activeGames=${activeGames.map(
-      (g) => `${g.id}(${g.phase},users=${g.users.length})`
-    )}`
-  );
+  const archivedGameIds: number[] = [];
   await Promise.all(
     activeGames.map(async (game) => {
       if (game.phase === "waiting" || game.phase === "ready") {
@@ -58,16 +45,25 @@ export async function anonymizeUser(
         const remainingCount = game.users.length - 1;
         if (remainingCount === 0) {
           await game.update({ archived: true });
-          broadcastDeleteGame(webSocketsServer, game.id);
+          archivedGameIds.push(game.id);
         } else if (game.phase === "ready" && remainingCount < game.maxPlayers) {
           await game.update({ phase: "waiting" });
         }
       } else {
         await game.update({ archived: true });
-        broadcastDeleteGame(webSocketsServer, game.id);
+        archivedGameIds.push(game.id);
       }
     })
   );
+
+  if (webSocketsServer) {
+    for (const gameId of archivedGameIds) {
+      webSocketsServer.emit("message", {
+        type: DELETE_GAME_IN_LOBBY,
+        payload: gameId,
+      });
+    }
+  }
 
   await Message.update({ name: "[deleted]" }, { where: { UserId: userId } });
 
@@ -92,15 +88,4 @@ export async function anonymizeUser(
     });
     socket.disconnect(true);
   }
-}
-
-function broadcastDeleteGame(
-  webSocketsServer: MyServer | undefined,
-  gameId: number
-) {
-  if (!webSocketsServer) return;
-  webSocketsServer.to("lobby").emit("message", {
-    type: DELETE_GAME_IN_LOBBY,
-    payload: gameId,
-  });
 }
