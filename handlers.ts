@@ -156,6 +156,13 @@ const addUserToSocket = async (
       payload: errorMessage,
     });
   }
+  if (user && /^\[deleted_\d+\]$/.test(user.name)) {
+    socket.emit("message", {
+      type: LOGIN_OR_SIGNUP_ERROR,
+      payload: "session_expired",
+    });
+    return;
+  }
   if (user) {
     socket.data.playerId = user.id;
     socket.data.user = user;
