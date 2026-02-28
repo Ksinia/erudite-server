@@ -245,10 +245,12 @@ const removeGameFromSocket = async (
       `gameId is ${gameId} for socket.data.playerId ${socket.data.playerId}`
     );
   } else {
+    socket.leave(gameId.toString());
+    if (socket.data.gameId === gameId) {
+      delete socket.data.gameId;
+    }
     try {
       await registerVisit(gameId, socket.data.playerId);
-      socket.leave(gameId.toString());
-      delete socket.data.gameId;
     } catch (error) {
       console.log(error);
     }
