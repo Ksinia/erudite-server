@@ -21,6 +21,7 @@ import {
   LOGIN_OR_SIGNUP_ERROR,
   MESSAGES_COUNT,
   NEW_MESSAGE,
+  TOKEN_EXPIRED,
 } from "./constants/outgoingMessageTypes.js";
 import fetchGame from "./services/fetchGame.js";
 import { notify } from "./services/notifications.js";
@@ -146,15 +147,18 @@ const addUserToSocket = async (
     });
   } catch (error) {
     console.log("problem retrieving user:", error);
-    // TODO: remove jwt from local storage on fe
-    const errorMessage =
-      error instanceof Error
-        ? `${error.name}: ${error.message}`
-        : String(error);
-    socket.emit("message", {
-      type: LOGIN_OR_SIGNUP_ERROR,
-      payload: errorMessage,
-    });
+    if (error instanceof Error && error.name === "TokenExpiredError") {
+      socket.emit("message", { type: TOKEN_EXPIRED });
+    } else {
+      const errorMessage =
+        error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error);
+      socket.emit("message", {
+        type: LOGIN_OR_SIGNUP_ERROR,
+        payload: errorMessage,
+      });
+    }
   }
   if (user && /^\[deleted_\d+\]$/.test(user.name)) {
     socket.emit("message", {

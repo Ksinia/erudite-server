@@ -9,6 +9,7 @@ import {
   DELETE_GAME_IN_LOBBY,
   LOGIN_OR_SIGNUP_ERROR,
 } from "../constants/outgoingMessageTypes.js";
+import { revokeAllUserTokens } from "./refreshToken.js";
 import type { MyServer } from "../index.js";
 
 export async function anonymizeUser(
@@ -16,6 +17,7 @@ export async function anonymizeUser(
   webSocketsServer?: MyServer
 ) {
   removePushToken(userId);
+  await revokeAllUserTokens(userId);
 
   const userGames = await Game.findAll({
     where: {

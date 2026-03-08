@@ -7,7 +7,7 @@ if (!process.env.JWT_SECRET) {
 const secret = process.env.JWT_SECRET;
 
 export function toJWT(data, shortTerm = false) {
-  const expiresIn = shortTerm ? "1h" : "1w";
+  const expiresIn = shortTerm ? "1h" : "24h";
   return jwt.sign(data, secret, { expiresIn });
 }
 

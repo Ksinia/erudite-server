@@ -64,6 +64,8 @@ const existingMigrations = [
   "26-active-user.ts",
   "27-subscription.ts",
   "28-add-email-confirmed.ts",
+  "29-blocked-users.ts",
+  "30-add-apple-id.ts",
 ];
 
 const seedMigrations = async () => {

@@ -20,9 +20,13 @@ export default function auth(req, res, next) {
         })
         .catch(next);
     } catch (error) {
-      res.status(400).send({
-        message: `Error ${error.name}: ${error.message}`,
-      });
+      if (error.name === "TokenExpiredError") {
+        res.status(401).send({ message: "token_expired" });
+      } else {
+        res.status(400).send({
+          message: `Error ${error.name}: ${error.message}`,
+        });
+      }
     }
   } else {
     res.status(401).send({

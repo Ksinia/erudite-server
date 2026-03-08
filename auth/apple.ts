@@ -7,6 +7,7 @@ import User from "../models/user.js";
 import { Sequelize } from "../models/index.js";
 import { LOGIN_SUCCESS } from "../constants/outgoingMessageTypes.js";
 import { anonymizeUser } from "../services/userDeletion.js";
+import { generateRefreshToken } from "../services/refreshToken.js";
 import type { MyServer } from "../index.js";
 
 const APPLE_AUDIENCE = ["com.xsenia.erudite"];
@@ -68,6 +69,7 @@ export default function appleAuthRouterFactory(webSocketsServer: MyServer) {
       }
 
       const jwt = toJWT({ userId: user.id });
+      const refreshToken = await generateRefreshToken(user.id);
       const action = {
         type: LOGIN_SUCCESS,
         payload: {
@@ -75,6 +77,7 @@ export default function appleAuthRouterFactory(webSocketsServer: MyServer) {
           name: user.name,
           email: user.email || "",
           jwt,
+          refreshToken,
           authMethod: "apple",
         },
       };
