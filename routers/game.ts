@@ -37,6 +37,12 @@ export default function factory(webSocketsServer: MyServer) {
     async (req: RequestWithUser, res, next) => {
       const currentUser = req.user;
       const { maxPlayers, language, players: playersIds } = req.body;
+      const players = Number(maxPlayers);
+      if (!players || players < 2 || players > 8) {
+        return res
+          .status(400)
+          .send({ message: "maxPlayers must be between 2 and 8" });
+      }
       try {
         const updatedGame = await createGame(
           currentUser,
