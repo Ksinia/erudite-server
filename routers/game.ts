@@ -24,9 +24,11 @@ import User from "../models/user.js";
 import { MyServer } from "../index";
 
 interface RequestBody {
-  userBoard: string[][];
-  wildCardOnBoard: { [x: string]: { [x: string]: string } };
+  userBoard: (string | null)[][];
+  wildCardOnBoard?: { [x: string]: { [x: string]: string } };
 }
+
+const BOARD_SIZE = 15;
 
 export default function factory(webSocketsServer: MyServer) {
   const router = Router();
@@ -315,18 +317,43 @@ function validateRequestBody(
   res: Response,
   next: NextFunction
 ) {
+  // a non-object body (e.g. a JSON null or array) would throw on the
+  // property access below, so reject it with a controlled 400
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "request body must be an object" });
+  }
   const body = req.body as RequestBody;
 
-  if (!body.userBoard || !Array.isArray(body.userBoard)) {
-    return res
-      .status(400)
-      .json({ error: "userBoard is required and must be an array" });
+  // the board is a fixed BOARD_SIZE x BOARD_SIZE grid whose cells are
+  // null or a string; enforcing the exact shape stops a ragged/sparse
+  // board from slipping undefined past the ownership scan and into the
+  // persisted board (or throwing on a missing row/cell)
+  if (!Array.isArray(body.userBoard) || body.userBoard.length !== BOARD_SIZE) {
+    return res.status(400).json({
+      error: `userBoard must be a ${BOARD_SIZE}x${BOARD_SIZE} array`,
+    });
+  }
+  for (const row of body.userBoard) {
+    if (!Array.isArray(row) || row.length !== BOARD_SIZE) {
+      return res.status(400).json({
+        error: `userBoard must be a ${BOARD_SIZE}x${BOARD_SIZE} array`,
+      });
+    }
+    for (let i = 0; i < BOARD_SIZE; i++) {
+      const cell = row[i];
+      if (cell !== null && typeof cell !== "string") {
+        return res
+          .status(400)
+          .json({ error: "userBoard cells must be null or a string" });
+      }
+    }
   }
 
   if ("wildCardOnBoard" in body) {
     if (
       typeof body.wildCardOnBoard !== "object" ||
-      body.wildCardOnBoard === null
+      body.wildCardOnBoard === null ||
+      Array.isArray(body.wildCardOnBoard)
     ) {
       return res
         .status(400)
@@ -335,7 +362,11 @@ function validateRequestBody(
 
     for (const key in body.wildCardOnBoard) {
       const innerObj = body.wildCardOnBoard[key];
-      if (typeof innerObj !== "object" || innerObj === null) {
+      if (
+        typeof innerObj !== "object" ||
+        innerObj === null ||
+        Array.isArray(innerObj)
+      ) {
         return res
           .status(400)
           .json({ error: `wildCardOnBoard[${key}] must be an object` });
@@ -349,6 +380,10 @@ function validateRequestBody(
         }
       }
     }
+  } else {
+    // makeTurn calls Object.keys(wildCardOnBoard) unguarded, so default
+    // the optional field to an empty object rather than let it throw
+    body.wildCardOnBoard = {};
   }
 
   req.body = body as RequestBody;
