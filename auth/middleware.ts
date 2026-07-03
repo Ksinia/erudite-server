@@ -1,12 +1,24 @@
 import User from "../models/user.js";
 import { toData } from "./jwt.js";
 
-export default function auth(req, res, next) {
-  const auth =
+/**
+ * Extracts the token from an "Authorization: Bearer <token>" header,
+ * or null when it is missing or malformed
+ */
+export function getBearerToken(req): string | null {
+  const parts =
     req.headers.authorization && req.headers.authorization.split(" ");
-  if (auth && auth[0] === "Bearer" && auth[1]) {
+  if (parts && parts[0] === "Bearer" && parts[1]) {
+    return parts[1];
+  }
+  return null;
+}
+
+export default function auth(req, res, next) {
+  const token = getBearerToken(req);
+  if (token) {
     try {
-      const data = toData(auth[1]);
+      const data = toData(token);
       User.findByPk(data.userId)
         .then((user) => {
           if (!user) {

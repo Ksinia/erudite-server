@@ -24,6 +24,7 @@ import {
   TOKEN_EXPIRED,
 } from "./constants/outgoingMessageTypes.js";
 import fetchGame from "./services/fetchGame.js";
+import { sanitizeGame } from "./services/sanitizeGame.js";
 import { notify } from "./services/notifications.js";
 import { storePushToken } from "./services/expoPush.js";
 import { MyServer, MySocket } from "./index";
@@ -148,7 +149,7 @@ const addUserToSocket = async (
   } catch (error) {
     console.log("problem retrieving user:", error);
     if (error instanceof Error && error.name === "TokenExpiredError") {
-      socket.emit("message", { type: TOKEN_EXPIRED });
+      socket.emit("message", { type: TOKEN_EXPIRED, payload: null });
     } else {
       const errorMessage =
         error instanceof Error
@@ -187,12 +188,17 @@ const addUserToSocket = async (
     try {
       const count = await countAllMessagesInLobby(user.id);
       socket.emit("message", { type: MESSAGES_COUNT, payload: count });
-      // if user was on a game page but not logged in, and then he logs in we need to send him more full game object
+      // if user was on a game page but not logged in, and then he logs in we
+      // resend the game now sanitized for this authenticated user, so they
+      // get their own hand instead of the spectator view
       if (socket.data.gameId) {
         const game = await fetchGame(socket.data.gameId);
         socket.emit("message", {
           type: GAME_UPDATED,
-          payload: { gameId: socket.data.gameId, game },
+          payload: {
+            gameId: socket.data.gameId,
+            game: game && sanitizeGame(game, user.id),
+          },
         });
         const allMessages = await getAllMessagesInGame(
           socket.data.gameId,
