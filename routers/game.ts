@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import authMiddleware from "../auth/middleware.js";
 import createGame from "../services/create.js";
 import joinGame from "../services/join.js";
-import startGame from "../services/start.js";
+import startGame, { StartGameError } from "../services/start.js";
 import { getUpdatedGameForLobby } from "../services/lobby.js";
 import makeTurn from "../services/turn.js";
 import validateTurn from "../services/validation.js";
@@ -88,10 +88,10 @@ export default function factory(webSocketsServer: MyServer) {
     "/start/:id",
     authMiddleware,
     validateGameId,
-    async (req: RequestWithGameId, res, nxt) => {
+    async (req: RequestWithAdditionalFields, res, nxt) => {
       const gameId = req.gameId;
       try {
-        const updatedGame = await startGame(gameId);
+        const updatedGame = await startGame(gameId, req.user.id);
         const updatedGameAction = {
           type: GAME_UPDATED,
           payload: { gameId, game: updatedGame },
@@ -104,6 +104,10 @@ export default function factory(webSocketsServer: MyServer) {
         sendTurnNotification(updatedGame.activeUserId, gameId);
         res.sendStatus(204);
       } catch (error) {
+        if (error instanceof StartGameError) {
+          res.status(error.status).send({ message: error.message });
+          return;
+        }
         nxt(error);
       }
     }
