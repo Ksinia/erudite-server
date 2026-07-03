@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import authMiddleware from "../auth/middleware.js";
+import authMiddleware, { getBearerToken } from "../auth/middleware.js";
 import createGame from "../services/create.js";
 import joinGame from "../services/join.js";
 import startGame from "../services/start.js";
@@ -22,6 +22,7 @@ import {
 } from "../services/game.js";
 import { canSeeGame, canUseInfiniteBoard } from "../services/board.js";
 import {
+  emitGameUpdated,
   gameUpdatedAction,
   parseClientFeatures,
   supportsInfiniteBoard,
@@ -154,14 +155,12 @@ export default function factory(webSocketsServer: MyServer) {
         const updatedGame = await joinGame(currentUser, gameId);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
-        const updatedGameAction = gameUpdatedAction(
-          updatedGame.id,
-          updatedGame
+        // the room broadcast is built per socket, the response for the
+        // joining user alone
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
+        res.send(
+          gameUpdatedAction(updatedGame.id, updatedGame, currentUser.id)
         );
-        webSocketsServer
-          .to(gameId.toString())
-          .emit("message", updatedGameAction);
-        res.send(updatedGameAction);
       } catch (error) {
         next(error);
       }
@@ -189,10 +188,7 @@ export default function factory(webSocketsServer: MyServer) {
           return res.status(404).send({ message: "game not found" });
         }
         const updatedGame = await startGame(gameId);
-        const updatedGameAction = gameUpdatedAction(gameId, updatedGame);
-        webSocketsServer
-          .to(gameId.toString())
-          .emit("message", updatedGameAction);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
         sendTurnNotification(
@@ -214,20 +210,17 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const game = await fetchGame(gameId);
-        // this endpoint has no auth middleware, so for restricted games the
-        // requester is identified from the optional Authorization header.
+        // this endpoint has no auth middleware, so the requester is
+        // identified from the optional Authorization header: it decides both
+        // whether a restricted game exists for them and whose hand they get.
         // A game the user may not see is reported exactly like a missing one,
         // which reveals nothing and is what every client already handles
+        const userId = await getOptionalUserId(req);
         const gameForRequester =
-          game &&
-          canSeeGame(
-            game,
-            await getOptionalUserId(req),
-            clientSupportsInfiniteBoard(req)
-          )
+          game && canSeeGame(game, userId, clientSupportsInfiniteBoard(req))
             ? game
             : null;
-        res.send(gameUpdatedAction(gameId, gameForRequester));
+        res.send(gameUpdatedAction(gameId, gameForRequester, userId));
       } catch (error) {
         next(error);
       }
@@ -268,12 +261,11 @@ export default function factory(webSocketsServer: MyServer) {
         };
         res.send(responseAction);
 
-        webSocketsServer
-          .to(gameId.toString())
-          .emit(
-            "message",
-            gameUpdatedAction(gameId, updatedGameAction.payload.game)
-          );
+        emitGameUpdated(
+          webSocketsServer,
+          gameId,
+          updatedGameAction.payload.game
+        );
 
         if (updatedGameAction.payload.game.phase === "finished") {
           const deleteGameAction = {
@@ -316,8 +308,7 @@ export default function factory(webSocketsServer: MyServer) {
           gameId,
           validation
         );
-        const action = gameUpdatedAction(gameId, updatedGame);
-        webSocketsServer.to(gameId.toString()).emit("message", action);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
         if (validation === "no") {
@@ -344,8 +335,7 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const updatedGame = await undoTurn(currentUserId, gameId);
-        const action = gameUpdatedAction(gameId, updatedGame);
-        webSocketsServer.to(gameId.toString()).emit("message", action);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
         res.sendStatus(204);
@@ -370,8 +360,7 @@ export default function factory(webSocketsServer: MyServer) {
           gameId,
           lettersToChange
         );
-        const action = gameUpdatedAction(gameId, updatedGame);
-        webSocketsServer.to(gameId.toString()).emit("message", action);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
         sendTurnNotification(
@@ -412,26 +401,25 @@ function clientSupportsInfiniteBoard(req: {
 
 /**
  * The id behind an optional Authorization header, for routes that carry no
- * auth middleware. The account is loaded and checked the way the middleware
- * checks it, so a token that outlived its account reads as a stranger here
- * too rather than keeping access to a restricted game.
+ * auth middleware. It decides both what the caller may see and whose hand
+ * the payload keeps, so the account is loaded and checked the way the
+ * middleware checks it: a token that outlived its account reads as a
+ * stranger here too rather than keeping access to a restricted game.
  */
-async function getOptionalUserId(req: {
-  headers: { authorization?: string };
-}): Promise<number | undefined> {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith("Bearer ")) {
-    return undefined;
+async function getOptionalUserId(req: Request<Params>): Promise<number | null> {
+  const token = getBearerToken(req);
+  if (!token) {
+    return null;
   }
   try {
-    const { userId } = toData(header.substring(7));
+    const { userId } = toData(token);
     const user = await User.findByPk(userId, { attributes: ["id", "name"] });
     if (!user || /^\[deleted_\d+\]$/.test(user.name)) {
-      return undefined;
+      return null;
     }
     return user.id;
   } catch {
-    return undefined;
+    return null;
   }
 }
 

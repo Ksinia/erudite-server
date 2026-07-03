@@ -216,7 +216,9 @@ const addUserToSocket = async (
     try {
       const count = await countAllMessagesInLobby(user.id);
       socket.emit("message", { type: MESSAGES_COUNT, payload: count });
-      // if user was on a game page but not logged in, and then he logs in we need to send him more full game object
+      // if user was on a game page but not logged in, and then he logs in we
+      // resend the game now sanitized for this authenticated user, so they
+      // get their own hand instead of the spectator view
       if (socket.data.gameId) {
         const game = await fetchGame(socket.data.gameId);
         if (
@@ -230,7 +232,10 @@ const addUserToSocket = async (
           socket.leave(socket.data.gameId.toString());
           delete socket.data.gameId;
         } else {
-          socket.emit("message", gameUpdatedAction(socket.data.gameId, game));
+          socket.emit(
+            "message",
+            gameUpdatedAction(socket.data.gameId, game, user.id)
+          );
           if (!joinedOnRetry) {
             const allMessages = await getAllMessagesInGame(
               socket.data.gameId,
