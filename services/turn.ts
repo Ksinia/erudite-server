@@ -14,14 +14,16 @@ import {
 export default async (
   currentUserId: number,
   gameId: number,
-  userBoard: string[][],
+  userBoard: (string | null)[][],
   wildCardOnBoard: { [x: string]: { [x: string]: string } }
 ): Promise<{ type: string; payload: { gameId: number; game: Game } }> => {
   const game = await Game.findByPk(gameId);
   // check if game is in turn phase and if it is current user's turn
   if (game.phase === "turn" && game.turnOrder[game.turn] === currentUserId) {
     //check if user passed
-    if (!userBoard.some((row) => row.some((letter) => letter))) {
+    // a placement is any non-null cell (matching newBoard/ownership below),
+    // so a board of only non-null junk is not mistaken for a pass
+    if (!userBoard.some((row) => row.some((letter) => letter !== null))) {
       // copy game board to previous board
       // change game phase to next turn, no need to validate pass
       // change passedCount qty
@@ -91,8 +93,19 @@ export default async (
           const letter = wildCardOnBoard[y][x];
           if (letter && leftQty > 0) {
             const index = userLetters.indexOf(letter);
-            if (index === -1 || letter !== currentGameBoard[y][x][1]) {
+            const boardCell = currentGameBoard[y]?.[x];
+            // a valid swap needs the real letter in hand and the target
+            // cell to be a wildcard on the board representing that letter
+            const isValidSwap =
+              index !== -1 &&
+              typeof boardCell === "string" &&
+              boardCell[0] === "*" &&
+              boardCell[1] === letter;
+            if (!isValidSwap) {
+              // don't mutate the hand or board on an invalid swap;
+              // the turn is rejected below
               ok = false;
+              return;
             }
             userLetters.splice(index, 1, "*");
             currentGameBoard[y][x] = letter;
@@ -100,33 +113,46 @@ export default async (
           }
         });
       });
+      // check that every placed letter comes from the user's hand,
+      // counting duplicates: a wildcard cell ("*x") consumes a "*"
+      // from the hand, any other cell consumes the letter itself
       if (ok) {
-        // check if all letters in turn were in user's hand
-        // TODO: take possible duplicates into account
-        // TODO: rewrite, it doesn't work because of wild cards from board
-        // if (
-        //   !userBoard.some((row) =>
-        //     row.some((letter) => {
-        //       console.log(letter);
-        //       return (
-        //         letter !== null &&
-        //         ((letter[0] !== "*" && !userLetters.includes(letter)) ||
-        //           (letter[0] === "*" &&
-        //             (!userLetters.includes("*") ||
-        //               letter.length > 2 ||
-        //               !lettersSets[currentGame.language].letters.includes(
-        //                 letter[1]
-        //               ))))
-        //       );
-        //     })
-        //   )
-        // ) {
+        const availableLetters: { [letter: string]: number } = {};
+        userLetters.forEach((letter) => {
+          availableLetters[letter] = (availableLetters[letter] || 0) + 1;
+        });
+        userBoard.forEach((row) => {
+          row.forEach((cell) => {
+            // an empty cell is null; anything else is treated as a
+            // placement (consistent with how newBoard is built below),
+            // so non-null junk like 0/false/"" falls through and is
+            // rejected rather than silently skipped
+            if (cell === null) {
+              return;
+            }
+            let neededLetter: string | null = null;
+            if (typeof cell === "string") {
+              if (cell[0] === "*" && cell.length === 2) {
+                neededLetter = "*";
+              } else if (cell[0] !== "*" && cell.length === 1) {
+                neededLetter = cell;
+              }
+            }
+            if (neededLetter !== null && availableLetters[neededLetter]) {
+              availableLetters[neededLetter] -= 1;
+            } else {
+              ok = false;
+            }
+          });
+        });
+      }
 
+      if (ok) {
         // check if all letters are placed on empty cells
         if (
           !userBoard.some((row, y) =>
             row.some(
-              (letter: string, x) =>
+              (letter: string | null, x) =>
                 letter !== null && game.board[y][x] !== null
             )
           )
@@ -213,7 +239,6 @@ export default async (
           }
         }
       }
-      // }
     }
   }
 
