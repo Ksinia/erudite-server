@@ -3,7 +3,7 @@ import { toJWT } from "./jwt.js";
 import User from "../models/user.js";
 import { Sequelize } from "../models/index.js";
 import bcrypt from "bcrypt";
-import authMiddleware from "./middleware.js";
+import authMiddleware, { getBearerToken } from "./middleware.js";
 import { LOGIN_SUCCESS } from "../constants/outgoingMessageTypes.js";
 import { RequestWithUser } from "../routers/game";
 import {
@@ -105,7 +105,7 @@ router.post("/refresh", async (req, res) => {
 
 router.get("/profile", authMiddleware, async (req: RequestWithUser, res) => {
   const currentUser = req.user;
-  const jwt = req.headers.authorization.split(" ")[1];
+  const jwt = getBearerToken(req);
   const action = {
     type: LOGIN_SUCCESS,
     payload: {
