@@ -2,6 +2,17 @@ import type Game from "../models/game.js";
 import { GAME_UPDATED } from "../constants/outgoingMessageTypes.js";
 import type { MyServer } from "../index.js";
 
+// the plain object shape returned by game.toJSON(); the fields sanitizeGame
+// reads are typed, the rest are carried through by the index signature
+interface GameJson {
+  letters?: { [key: string]: string[] };
+  turnOrder?: number[];
+  turn?: number;
+  previousLetters?: string[];
+  putLetters?: string[];
+  [key: string]: unknown;
+}
+
 /**
  * Returns a plain game object safe to send to the given user:
  * the recipient keeps their own hand, the pot is masked to an array
@@ -9,11 +20,11 @@ import type { MyServer } from "../index.js";
  * players' letters are removed. Anonymous recipients get no hand.
  */
 export const sanitizeGame = (game: Game, userId: number | null) => {
-  const json = game.toJSON();
+  const json = game.toJSON() as GameJson;
   // a game without letters yet (e.g. a freshly joined waiting game) still
   // gets a normalized letters object so every sanitized payload has the
   // same shape the client expects
-  const sourceLetters = json.letters || {};
+  const sourceLetters: { [key: string]: string[] } = json.letters || {};
   const letters: { [key: string]: string[] } = {
     pot: Array(sourceLetters.pot ? sourceLetters.pot.length : 0).fill(""),
   };
