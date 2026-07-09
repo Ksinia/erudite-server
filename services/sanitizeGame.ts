@@ -1,17 +1,10 @@
+import type { InferAttributes } from "sequelize";
 import type Game from "../models/game.js";
 import { GAME_UPDATED } from "../constants/outgoingMessageTypes.js";
 import type { MyServer } from "../index.js";
 
-// the plain object shape returned by game.toJSON(); the fields sanitizeGame
-// reads are typed, the rest are carried through by the index signature
-interface GameJson {
-  letters?: { [key: string]: string[] };
-  turnOrder?: number[];
-  turn?: number;
-  previousLetters?: string[];
-  putLetters?: string[];
-  [key: string]: unknown;
-}
+type GameJson = InferAttributes<Game>;
+type GameLetters = GameJson["letters"];
 
 /**
  * Returns a plain game object safe to send to the given user:
@@ -21,20 +14,14 @@ interface GameJson {
  */
 export const sanitizeGame = (game: Game, userId: number | null) => {
   const json = game.toJSON() as GameJson;
-  // a game without letters yet (e.g. a freshly joined waiting game) still
-  // gets a normalized letters object so every sanitized payload has the
-  // same shape the client expects
-  const sourceLetters: { [key: string]: string[] } = json.letters || {};
-  const letters: { [key: string]: string[] } = {
-    pot: Array(sourceLetters.pot ? sourceLetters.pot.length : 0).fill(""),
+  const sourceLetters = json.letters;
+  const letters: GameLetters = {
+    pot: Array(sourceLetters?.pot?.length ?? 0).fill(""),
   };
-  if (userId !== null && sourceLetters[userId]) {
-    letters[String(userId)] = sourceLetters[userId];
+  if (userId !== null && sourceLetters?.[userId]) {
+    letters[userId] = sourceLetters[userId];
   }
-  // previousLetters and putLetters describe the hand of the player
-  // who made the turn currently on the board
-  const isTurnUser =
-    userId !== null && json.turnOrder && json.turnOrder[json.turn] === userId;
+  const isTurnUser = userId !== null && json.turnOrder?.[json.turn] === userId;
   return {
     ...json,
     letters,
