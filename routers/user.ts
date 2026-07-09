@@ -4,7 +4,7 @@ import User from "../models/user.js";
 import { Sequelize } from "../models/index.js";
 import bcrypt from "bcrypt";
 import { login } from "../auth/router.js";
-import authMiddleware from "../auth/middleware.js";
+import authMiddleware, { getBearerToken } from "../auth/middleware.js";
 import { toData, toJWT } from "../auth/jwt.js";
 import { clientUrl } from "../constants/runtime.js";
 import {
@@ -306,11 +306,10 @@ router.get(
   authMiddleware,
   async (req: RequestWithUser, res, next) => {
     const currentUser = req.user;
-    const auth =
-      req.headers.authorization && req.headers.authorization.split(" ");
+    const token = getBearerToken(req);
     let data: { email: string };
     try {
-      data = toData(auth[1]);
+      data = toData(token);
     } catch (error) {
       console.log("problem retrieving user:", error);
       next(error);

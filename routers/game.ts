@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
-import authMiddleware from "../auth/middleware.js";
+import authMiddleware, { getBearerToken } from "../auth/middleware.js";
+import { toData } from "../auth/jwt.js";
+import { emitGameUpdated, sanitizeGame } from "../services/sanitizeGame.js";
 import createGame from "../services/create.js";
 import joinGame from "../services/join.js";
 import startGame from "../services/start.js";
@@ -70,13 +72,16 @@ export default function factory(webSocketsServer: MyServer) {
         const updatedGame = await joinGame(currentUser, gameId);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
+        // sanitize the room broadcast per socket and the HTTP response for
+        // the joining user, keeping every GAME_UPDATED payload sanitized
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const updatedGameAction = {
           type: GAME_UPDATED,
-          payload: { gameId: updatedGame.id, game: updatedGame },
+          payload: {
+            gameId: updatedGame.id,
+            game: sanitizeGame(updatedGame, currentUser.id),
+          },
         };
-        webSocketsServer
-          .to(gameId.toString())
-          .emit("message", updatedGameAction);
         res.send(updatedGameAction);
       } catch (error) {
         next(error);
@@ -92,13 +97,7 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const updatedGame = await startGame(gameId);
-        const updatedGameAction = {
-          type: GAME_UPDATED,
-          payload: { gameId, game: updatedGame },
-        };
-        webSocketsServer
-          .to(gameId.toString())
-          .emit("message", updatedGameAction);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         sendTurnNotification(updatedGame.activeUserId, gameId);
@@ -118,7 +117,10 @@ export default function factory(webSocketsServer: MyServer) {
         const game = await fetchGame(gameId);
         const action = {
           type: GAME_UPDATED,
-          payload: { gameId, game },
+          payload: {
+            gameId,
+            game: game && sanitizeGame(game, getRequestUserId(req)),
+          },
         };
         res.send(action);
       } catch (error) {
@@ -156,9 +158,11 @@ export default function factory(webSocketsServer: MyServer) {
         };
         res.send(responseAction);
 
-        webSocketsServer
-          .to(gameId.toString())
-          .emit("message", updatedGameAction);
+        emitGameUpdated(
+          webSocketsServer,
+          gameId,
+          updatedGameAction.payload.game
+        );
 
         if (updatedGameAction.payload.game.phase === "finished") {
           const deleteGameAction = {
@@ -200,14 +204,7 @@ export default function factory(webSocketsServer: MyServer) {
           gameId,
           validation
         );
-        const action = {
-          type: GAME_UPDATED,
-          payload: {
-            gameId,
-            game: updatedGame,
-          },
-        };
-        webSocketsServer.to(gameId.toString()).emit("message", action);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         if (validation === "no") {
@@ -230,14 +227,7 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const updatedGame = await undoTurn(currentUserId, gameId);
-        const action = {
-          type: GAME_UPDATED,
-          payload: {
-            gameId,
-            game: updatedGame,
-          },
-        };
-        webSocketsServer.to(gameId.toString()).emit("message", action);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         res.sendStatus(204);
@@ -262,14 +252,7 @@ export default function factory(webSocketsServer: MyServer) {
           gameId,
           lettersToChange
         );
-        const action = {
-          type: GAME_UPDATED,
-          payload: {
-            gameId,
-            game: updatedGame,
-          },
-        };
-        webSocketsServer.to(gameId.toString()).emit("message", action);
+        emitGameUpdated(webSocketsServer, gameId, updatedGame);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         webSocketsServer.to("lobby").emit("message", lobbyAction);
         sendTurnNotification(updatedGame.activeUserId, gameId);
@@ -295,6 +278,22 @@ interface RequestWithGameId extends Request<Params> {
 }
 
 type RequestWithAdditionalFields = RequestWithGameId & RequestWithUser;
+
+/**
+ * Optional authentication: returns the user id from a valid
+ * Authorization header or null for anonymous requests
+ */
+function getRequestUserId(req: Request<Params>): number | null {
+  const token = getBearerToken(req);
+  if (!token) {
+    return null;
+  }
+  try {
+    return toData(token).userId || null;
+  } catch {
+    return null;
+  }
+}
 
 function validateGameId(
   req: RequestWithGameId,
