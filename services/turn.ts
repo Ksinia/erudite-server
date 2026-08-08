@@ -1,16 +1,18 @@
 import Game from "../models/game.js";
 import { getNextTurn, getResult, getWords, subtract } from "./game.js";
-import { growBoard } from "./board.js";
+import { DEFAULT_ORIGIN, growBoard } from "./board.js";
 import fetchGame from "./fetchGame.js";
 import updateGame from "./updateGame.js";
 import {
+  BOARD_OUT_OF_DATE,
   DUPLICATED_WORDS,
   GAME_UPDATED,
 } from "../constants/outgoingMessageTypes.js";
 
 export type TurnResult =
   | { type: typeof GAME_UPDATED; payload: { gameId: number; game: Game } }
-  | { type: typeof DUPLICATED_WORDS; payload: string[] };
+  | { type: typeof DUPLICATED_WORDS; payload: string[] }
+  | { type: typeof BOARD_OUT_OF_DATE; payload: { gameId: number } };
 
 /**
  * Makes turn and returns updated game
@@ -73,9 +75,14 @@ export default async (
         });
       }
     } else if (
-      userBoard.length === game.board.length &&
-      userBoard.every((row) => row.length === game.board[0].length)
+      userBoard.length !== game.board.length ||
+      userBoard.some((row) => row.length !== game.board[0].length)
     ) {
+      // the board grew after the client rendered it, so these coordinates
+      // mean something else now: tell the client to refetch instead of
+      // silently dropping the turn
+      return { type: BOARD_OUT_OF_DATE, payload: { gameId } };
+    } else {
       // user didn't pass and sent a board matching the current dimensions
       const userLetters = game.letters[currentUserId].slice();
       const currentGameBoard = game.board.map((row) => row.slice());
@@ -206,7 +213,7 @@ export default async (
             // previousBoard is padded identically to stay aligned
             let boardToSave = newBoard;
             let previousBoardToSave = game.board;
-            let originToSave = game.boardOrigin || { x: 0, y: 0 };
+            let originToSave = game.boardOrigin || DEFAULT_ORIGIN;
             if (game.boardType === "infinite") {
               const grown = growBoard(newBoard, game.board, originToSave);
               boardToSave = grown.board;

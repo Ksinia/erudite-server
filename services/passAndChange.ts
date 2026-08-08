@@ -21,9 +21,9 @@ export default async (currentUserId, gameId, lettersToChange) => {
     const previousUserLetters = game.letters[currentUserId];
     const remainingLetters = subtract(previousUserLetters, lettersToChange);
     // an infinite game never runs out of letters: refill the pot with
-    // another complete set once it cannot cover a full exchange
+    // another complete set once it cannot cover the exchange
     let pot = game.letters.pot;
-    if (game.boardType === "infinite" && pot.length < 7) {
+    if (game.boardType === "infinite" && pot.length < lettersToChange.length) {
       pot = pot.concat(shuffle(lettersSets[game.language].letters.slice()));
     }
     // give new letters to user

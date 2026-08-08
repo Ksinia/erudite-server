@@ -32,6 +32,7 @@ export default async (currentUser, gameId) => {
       "validated",
       "language",
       "maxPlayers",
+      "boardType",
     ],
     include: [
       {

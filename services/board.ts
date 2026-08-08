@@ -7,8 +7,16 @@ export const CLASSIC_BOARD_SIZE = 15;
 export const PATTERN_PERIOD = CLASSIC_BOARD_SIZE - 1;
 // a full rack is 7 letters, so with this margin a player can always
 // extend a word outward without hitting the edge of an infinite board
-export const EDGE_MARGIN = 7;
-export const GROWTH_STEP = 7;
+export const RACK_SIZE = 7;
+export const EDGE_MARGIN = RACK_SIZE;
+export const GROWTH_STEP = RACK_SIZE;
+/**
+ * Upper bound on either dimension. The board is meant to feel unbounded,
+ * but every update ships both boards in full, so a game drifting outward
+ * for hundreds of turns would grow the payload without limit. At this size
+ * the far edges behave like the edges of a classic board.
+ */
+export const MAX_BOARD_SIZE = 99;
 
 export interface BoardOrigin {
   x: number;
@@ -25,8 +33,8 @@ export interface BoardOrigin {
 export const canUseInfiniteBoard = (userId?: number | null): boolean => {
   const allowedIds = (process.env.INFINITE_BOARD_USERS || "")
     .split(",")
-    .map((value) => parseInt(value.trim()))
-    .filter((id) => !isNaN(id));
+    .map((value) => Number(value.trim()))
+    .filter((id) => Number.isInteger(id) && id > 0);
   return userId != null && allowedIds.includes(userId);
 };
 
@@ -109,10 +117,26 @@ export const growBoard = (
   }
   const height = board.length;
   const width = board[0].length;
-  const padTop = minY < EDGE_MARGIN ? GROWTH_STEP : 0;
-  const padBottom = height - 1 - maxY < EDGE_MARGIN ? GROWTH_STEP : 0;
-  const padLeft = minX < EDGE_MARGIN ? GROWTH_STEP : 0;
-  const padRight = width - 1 - maxX < EDGE_MARGIN ? GROWTH_STEP : 0;
+  // grow only while there is room left under the cap, and split what
+  // remains between the two sides that need it
+  const verticalRoom = Math.max(0, MAX_BOARD_SIZE - height);
+  const horizontalRoom = Math.max(0, MAX_BOARD_SIZE - width);
+  const wantTop = minY < EDGE_MARGIN;
+  const wantBottom = height - 1 - maxY < EDGE_MARGIN;
+  const wantLeft = minX < EDGE_MARGIN;
+  const wantRight = width - 1 - maxX < EDGE_MARGIN;
+  const verticalStep = Math.min(
+    GROWTH_STEP,
+    Math.floor(verticalRoom / ((wantTop ? 1 : 0) + (wantBottom ? 1 : 0) || 1))
+  );
+  const horizontalStep = Math.min(
+    GROWTH_STEP,
+    Math.floor(horizontalRoom / ((wantLeft ? 1 : 0) + (wantRight ? 1 : 0) || 1))
+  );
+  const padTop = wantTop ? verticalStep : 0;
+  const padBottom = wantBottom ? verticalStep : 0;
+  const padLeft = wantLeft ? horizontalStep : 0;
+  const padRight = wantRight ? horizontalStep : 0;
   if (!padTop && !padBottom && !padLeft && !padRight) {
     return { board, previousBoard, origin };
   }

@@ -7,6 +7,7 @@
     "build": "mkdir -p dist && cp .env* ./dist/ && tsc || true",
     "dev": "NODE_ENV=development tsx watch index.ts",
     "db:makemigrations": "./node_modules/sequelize-auto-migrations/bin/makemigration.js",
+    "test": "tsx --test services/*.test.ts",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "tsc": "./node_modules/.bin/tsc --build tsconfig.json"

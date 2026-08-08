@@ -11,6 +11,7 @@ import passAndChange from "../services/passAndChange.js";
 import fetchGame from "../services/fetchGame.js";
 import { sendFinishedGameNotifications } from "../services/mail.js";
 import {
+  BOARD_OUT_OF_DATE,
   DELETE_GAME_IN_LOBBY,
   DUPLICATED_WORDS,
   GAME_UPDATED,
@@ -65,10 +66,18 @@ export default function factory(webSocketsServer: MyServer) {
           .status(400)
           .send({ message: "boardType must be classic or infinite" });
       }
-      if (boardType === "infinite" && !canUseInfiniteBoard(currentUser.id)) {
-        return res.status(403).send({
-          message: "infinite board is not available for this account",
-        });
+      if (boardType === "infinite") {
+        // every player must have access, otherwise the game would be
+        // invisible to someone it waits for
+        const participants = [
+          currentUser.id,
+          ...(Array.isArray(playersIds) ? playersIds.map(Number) : []),
+        ];
+        if (participants.some((id) => !canUseInfiniteBoard(id))) {
+          return res.status(403).send({
+            message: "infinite board is not available for all players",
+          });
+        }
       }
       try {
         const updatedGame = await createGame(
@@ -188,6 +197,11 @@ export default function factory(webSocketsServer: MyServer) {
 
         if (updatedGameAction.type === DUPLICATED_WORDS) {
           res.send(updatedGameAction);
+          return;
+        }
+
+        if (updatedGameAction.type === BOARD_OUT_OF_DATE) {
+          res.status(409).send(updatedGameAction);
           return;
         }
 

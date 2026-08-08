@@ -3,6 +3,7 @@ import {
   DEFAULT_ORIGIN,
   getLetterBonus,
   getWordBonus,
+  RACK_SIZE,
 } from "./board.js";
 import lettersSets from "../constants/letterSets/index.js";
 import { notify } from "./notifications.js";
@@ -95,13 +96,13 @@ export const updateGameLetters = (game) => {
   const currentUserId = game.turnOrder[game.turn];
   const currentUserLetters = game.letters[currentUserId];
   let pot = game.letters.pot;
-  // an infinite game never runs out of letters: when the pot cannot refill
-  // a full rack anymore, another complete letter set is poured in, so the
+  let requiredQty = RACK_SIZE - currentUserLetters.length;
+  // an infinite game never runs out of letters: when the pot can no longer
+  // refill the rack, another complete letter set is poured in, so the
   // original letters are spent evenly before the new ones mix in
-  if (game.boardType === "infinite" && pot.length < 7) {
+  if (game.boardType === "infinite" && pot.length < requiredQty) {
     pot = pot.concat(shuffle(lettersSets[game.language].letters.slice()));
   }
-  let requiredQty = 7 - currentUserLetters.length;
   if (pot.length < requiredQty) {
     requiredQty = pot.length;
   }
