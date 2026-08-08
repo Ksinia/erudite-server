@@ -16,8 +16,10 @@ export interface BoardOrigin {
 }
 
 /**
- * INFINITE_BOARD_USERS limits who can see, join and create infinite games:
- * a comma-separated list of user ids. Unset or empty means everyone.
+ * INFINITE_BOARD_USERS lists the user ids that can see, join and create
+ * infinite games, comma-separated. The feature is closed by default: when
+ * the variable is unset or empty, nobody has access, so a deployment that
+ * forgets to set it does not expose the feature.
  * Read lazily so it does not depend on dotenv initialization order.
  */
 export const canUseInfiniteBoard = (userId?: number | null): boolean => {
@@ -25,9 +27,6 @@ export const canUseInfiniteBoard = (userId?: number | null): boolean => {
     .split(",")
     .map((value) => parseInt(value.trim()))
     .filter((id) => !isNaN(id));
-  if (allowedIds.length === 0) {
-    return true;
-  }
   return userId != null && allowedIds.includes(userId);
 };
 
