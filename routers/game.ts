@@ -151,13 +151,14 @@ export default function factory(webSocketsServer: MyServer) {
       try {
         const game = await fetchGame(gameId);
         // this endpoint has no auth middleware, so for restricted games the
-        // requester is identified from the optional Authorization header
-        if (game && !canSeeGame(game, getOptionalUserId(req))) {
-          return res.status(404).send({ message: "game not found" });
-        }
+        // requester is identified from the optional Authorization header.
+        // A game the user may not see is reported exactly like a missing one,
+        // which reveals nothing and is what every client already handles
+        const gameForRequester =
+          game && canSeeGame(game, getOptionalUserId(req)) ? game : null;
         const action = {
           type: GAME_UPDATED,
-          payload: { gameId, game },
+          payload: { gameId, game: gameForRequester },
         };
         res.send(action);
       } catch (error) {
