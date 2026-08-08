@@ -36,6 +36,10 @@ interface SocketData {
   gameId: number;
   user: User;
   blockedUserIds: Set<number>;
+  // what this client says it can handle, see services/gamePayload.ts
+  features: string[];
+  // a room the socket asked for before it identified itself
+  pendingGameId: number;
 }
 
 export type MyServer = Server<

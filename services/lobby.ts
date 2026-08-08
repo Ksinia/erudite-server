@@ -97,7 +97,10 @@ export const getUpdatedGameForLobby = (game): LobbyGameAction => {
   };
 };
 
-export const fetchGames = async (userId?: number) => {
+export const fetchGames = async (
+  userId?: number,
+  clientSupportsInfiniteBoard = true
+) => {
   const games = await Game.findAll({
     attributes: [
       "id",
@@ -126,7 +129,7 @@ export const fetchGames = async (userId?: number) => {
     ],
   });
   return games
-    .filter((game) => canSeeGame(game, userId))
+    .filter((game) => canSeeGame(game, userId, clientSupportsInfiniteBoard))
     .map((game) => {
       const json = game.toJSON();
       const { turns, ...rest } = json;

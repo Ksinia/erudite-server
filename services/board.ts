@@ -40,13 +40,19 @@ export const canUseInfiniteBoard = (userId?: number | null): boolean => {
 
 /**
  * Whether a game may be shown to a given user (or anonymous visitor when
- * userId is undefined). Only infinite games are ever hidden.
+ * userId is undefined) on the client they are using. Only infinite games are
+ * ever hidden: they need both an allowed account and a client that can draw
+ * a board which changes size, so an older build is never handed one.
  */
 export const canSeeGame = (
   game: { boardType?: string | null },
-  userId?: number | null
+  userId?: number | null,
+  clientSupportsInfiniteBoard = true
 ): boolean => {
-  return game.boardType !== "infinite" || canUseInfiniteBoard(userId);
+  return (
+    game.boardType !== "infinite" ||
+    (canUseInfiniteBoard(userId) && clientSupportsInfiniteBoard)
+  );
 };
 
 export const DEFAULT_ORIGIN: BoardOrigin = { x: 0, y: 0 };

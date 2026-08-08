@@ -14,7 +14,6 @@ import {
   BOARD_OUT_OF_DATE,
   DELETE_GAME_IN_LOBBY,
   DUPLICATED_WORDS,
-  GAME_UPDATED,
   NO_DUPLICATIONS,
 } from "../constants/outgoingMessageTypes.js";
 import {
@@ -22,6 +21,11 @@ import {
   sendTurnNotification,
 } from "../services/game.js";
 import { canSeeGame, canUseInfiniteBoard } from "../services/board.js";
+import {
+  gameUpdatedAction,
+  parseClientFeatures,
+  supportsInfiniteBoard,
+} from "../services/gamePayload.js";
 import { toData } from "../auth/jwt.js";
 import User from "../models/user.js";
 import Game from "../models/game.js";
@@ -107,16 +111,23 @@ export default function factory(webSocketsServer: MyServer) {
         const gameToJoin = await Game.findByPk(gameId, {
           attributes: ["boardType"],
         });
-        if (gameToJoin && !canSeeGame(gameToJoin, currentUser.id)) {
+        if (
+          gameToJoin &&
+          !canSeeGame(
+            gameToJoin,
+            currentUser.id,
+            clientSupportsInfiniteBoard(req)
+          )
+        ) {
           return res.status(404).send({ message: "game not found" });
         }
         const updatedGame = await joinGame(currentUser, gameId);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
-        const updatedGameAction = {
-          type: GAME_UPDATED,
-          payload: { gameId: updatedGame.id, game: updatedGame },
-        };
+        const updatedGameAction = gameUpdatedAction(
+          updatedGame.id,
+          updatedGame
+        );
         webSocketsServer
           .to(gameId.toString())
           .emit("message", updatedGameAction);
@@ -135,10 +146,7 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const updatedGame = await startGame(gameId);
-        const updatedGameAction = {
-          type: GAME_UPDATED,
-          payload: { gameId, game: updatedGame },
-        };
+        const updatedGameAction = gameUpdatedAction(gameId, updatedGame);
         webSocketsServer
           .to(gameId.toString())
           .emit("message", updatedGameAction);
@@ -164,12 +172,15 @@ export default function factory(webSocketsServer: MyServer) {
         // A game the user may not see is reported exactly like a missing one,
         // which reveals nothing and is what every client already handles
         const gameForRequester =
-          game && canSeeGame(game, getOptionalUserId(req)) ? game : null;
-        const action = {
-          type: GAME_UPDATED,
-          payload: { gameId, game: gameForRequester },
-        };
-        res.send(action);
+          game &&
+          canSeeGame(
+            game,
+            getOptionalUserId(req),
+            clientSupportsInfiniteBoard(req)
+          )
+            ? game
+            : null;
+        res.send(gameUpdatedAction(gameId, gameForRequester));
       } catch (error) {
         next(error);
       }
@@ -212,7 +223,10 @@ export default function factory(webSocketsServer: MyServer) {
 
         webSocketsServer
           .to(gameId.toString())
-          .emit("message", updatedGameAction);
+          .emit(
+            "message",
+            gameUpdatedAction(gameId, updatedGameAction.payload.game)
+          );
 
         if (updatedGameAction.payload.game.phase === "finished") {
           const deleteGameAction = {
@@ -254,13 +268,7 @@ export default function factory(webSocketsServer: MyServer) {
           gameId,
           validation
         );
-        const action = {
-          type: GAME_UPDATED,
-          payload: {
-            gameId,
-            game: updatedGame,
-          },
-        };
+        const action = gameUpdatedAction(gameId, updatedGame);
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
@@ -284,13 +292,7 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const updatedGame = await undoTurn(currentUserId, gameId);
-        const action = {
-          type: GAME_UPDATED,
-          payload: {
-            gameId,
-            game: updatedGame,
-          },
-        };
+        const action = gameUpdatedAction(gameId, updatedGame);
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
@@ -316,13 +318,7 @@ export default function factory(webSocketsServer: MyServer) {
           gameId,
           lettersToChange
         );
-        const action = {
-          type: GAME_UPDATED,
-          payload: {
-            gameId,
-            game: updatedGame,
-          },
-        };
+        const action = gameUpdatedAction(gameId, updatedGame);
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
@@ -349,6 +345,14 @@ interface RequestWithGameId extends Request<Params> {
 }
 
 type RequestWithAdditionalFields = RequestWithGameId & RequestWithUser;
+
+function clientSupportsInfiniteBoard(req: {
+  headers: Request["headers"];
+}): boolean {
+  return supportsInfiniteBoard(
+    parseClientFeatures(req.headers["x-client-features"])
+  );
+}
 
 function getOptionalUserId(req: {
   headers: { authorization?: string };
