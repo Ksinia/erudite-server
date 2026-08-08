@@ -3,7 +3,7 @@ import authMiddleware from "../auth/middleware.js";
 import createGame from "../services/create.js";
 import joinGame from "../services/join.js";
 import startGame from "../services/start.js";
-import { getUpdatedGameForLobby } from "../services/lobby.js";
+import { getUpdatedGameForLobby, LobbyGameAction } from "../services/lobby.js";
 import makeTurn from "../services/turn.js";
 import validateTurn from "../services/validation.js";
 import undoTurn from "../services/undo.js";
@@ -20,7 +20,10 @@ import {
   sendDisapproveNotification,
   sendTurnNotification,
 } from "../services/game.js";
+import { canSeeGame, canUseInfiniteBoard } from "../services/board.js";
+import { toData } from "../auth/jwt.js";
 import User from "../models/user.js";
+import Game from "../models/game.js";
 import { MyServer } from "../index";
 
 interface RequestBody {
@@ -31,27 +34,52 @@ interface RequestBody {
 export default function factory(webSocketsServer: MyServer) {
   const router = Router();
 
+  // while infinite-board access is restricted, infinite games are kept out
+  // of the shared lobby room: its audience includes arbitrary users
+  const emitToLobby = (
+    game: { boardType?: string | null },
+    action: LobbyGameAction
+  ) => {
+    if (canSeeGame(game)) {
+      webSocketsServer.to("lobby").emit("message", action);
+    }
+  };
+
   router.post(
     "/create",
     authMiddleware,
     async (req: RequestWithUser, res, next) => {
       const currentUser = req.user;
-      const { maxPlayers, language, players: playersIds } = req.body;
+      const { maxPlayers, language, players: playersIds, boardType } = req.body;
       const players = Number(maxPlayers);
       if (!players || players < 2 || players > 8) {
         return res
           .status(400)
           .send({ message: "maxPlayers must be between 2 and 8" });
       }
+      if (
+        boardType !== undefined &&
+        !["classic", "infinite"].includes(boardType)
+      ) {
+        return res
+          .status(400)
+          .send({ message: "boardType must be classic or infinite" });
+      }
+      if (boardType === "infinite" && !canUseInfiniteBoard(currentUser.id)) {
+        return res.status(403).send({
+          message: "infinite board is not available for this account",
+        });
+      }
       try {
         const updatedGame = await createGame(
           currentUser,
           maxPlayers,
           playersIds,
-          language
+          language,
+          boardType
         );
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        emitToLobby(updatedGame, lobbyAction);
         res.send(lobbyAction.payload);
       } catch (error) {
         next(error);
@@ -67,9 +95,15 @@ export default function factory(webSocketsServer: MyServer) {
       const currentUser = req.user;
       const gameId: number = req.gameId;
       try {
+        const gameToJoin = await Game.findByPk(gameId, {
+          attributes: ["boardType"],
+        });
+        if (gameToJoin && !canSeeGame(gameToJoin, currentUser.id)) {
+          return res.status(404).send({ message: "game not found" });
+        }
         const updatedGame = await joinGame(currentUser, gameId);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        emitToLobby(updatedGame, lobbyAction);
         const updatedGameAction = {
           type: GAME_UPDATED,
           payload: { gameId: updatedGame.id, game: updatedGame },
@@ -100,7 +134,7 @@ export default function factory(webSocketsServer: MyServer) {
           .to(gameId.toString())
           .emit("message", updatedGameAction);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        emitToLobby(updatedGame, lobbyAction);
         sendTurnNotification(updatedGame.activeUserId, gameId);
         res.sendStatus(204);
       } catch (error) {
@@ -116,6 +150,11 @@ export default function factory(webSocketsServer: MyServer) {
       const gameId = req.gameId;
       try {
         const game = await fetchGame(gameId);
+        // this endpoint has no auth middleware, so for restricted games the
+        // requester is identified from the optional Authorization header
+        if (game && !canSeeGame(game, getOptionalUserId(req))) {
+          return res.status(404).send({ message: "game not found" });
+        }
         const action = {
           type: GAME_UPDATED,
           payload: { gameId, game },
@@ -171,7 +210,7 @@ export default function factory(webSocketsServer: MyServer) {
           const lobbyAction = getUpdatedGameForLobby(
             updatedGameAction.payload.game
           );
-          webSocketsServer.to("lobby").emit("message", lobbyAction);
+          emitToLobby(updatedGameAction.payload.game, lobbyAction);
         }
 
         // every time after a turn we need to inform the next player about their turn
@@ -209,7 +248,7 @@ export default function factory(webSocketsServer: MyServer) {
         };
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        emitToLobby(updatedGame, lobbyAction);
         if (validation === "no") {
           sendDisapproveNotification(updatedGame.activeUserId, gameId);
         }
@@ -239,7 +278,7 @@ export default function factory(webSocketsServer: MyServer) {
         };
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        emitToLobby(updatedGame, lobbyAction);
         res.sendStatus(204);
       } catch (error) {
         next(error);
@@ -271,7 +310,7 @@ export default function factory(webSocketsServer: MyServer) {
         };
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
-        webSocketsServer.to("lobby").emit("message", lobbyAction);
+        emitToLobby(updatedGame, lobbyAction);
         sendTurnNotification(updatedGame.activeUserId, gameId);
         res.sendStatus(204);
       } catch (error) {
@@ -295,6 +334,20 @@ interface RequestWithGameId extends Request<Params> {
 }
 
 type RequestWithAdditionalFields = RequestWithGameId & RequestWithUser;
+
+function getOptionalUserId(req: {
+  headers: { authorization?: string };
+}): number | undefined {
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) {
+    try {
+      return toData(header.substring(7)).userId;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
 
 function validateGameId(
   req: RequestWithGameId,

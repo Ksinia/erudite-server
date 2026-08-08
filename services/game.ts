@@ -1,4 +1,10 @@
-import { letterBonuses, wordBonuses } from "../constants/bonuses.js";
+import {
+  BoardOrigin,
+  DEFAULT_ORIGIN,
+  getLetterBonus,
+  getWordBonus,
+} from "./board.js";
+import lettersSets from "../constants/letterSets/index.js";
 import { notify } from "./notifications.js";
 
 export const BALANCED_USER_ID = 3;
@@ -88,31 +94,30 @@ export const getNextTurn = (game) => {
 export const updateGameLetters = (game) => {
   const currentUserId = game.turnOrder[game.turn];
   const currentUserLetters = game.letters[currentUserId];
+  let pot = game.letters.pot;
+  // an infinite game never runs out of letters: when the pot cannot refill
+  // a full rack anymore, another complete letter set is poured in, so the
+  // original letters are spent evenly before the new ones mix in
+  if (game.boardType === "infinite" && pot.length < 7) {
+    pot = pot.concat(shuffle(lettersSets[game.language].letters.slice()));
+  }
   let requiredQty = 7 - currentUserLetters.length;
-  if (game.letters.pot.length < requiredQty) {
-    requiredQty = game.letters.pot.length;
+  if (pot.length < requiredQty) {
+    requiredQty = pot.length;
   }
   let newLetters;
   if (currentUserId === BALANCED_USER_ID) {
-    newLetters = drawBalancedLetters(
-      game.letters.pot,
-      requiredQty,
-      currentUserLetters
-    );
+    newLetters = drawBalancedLetters(pot, requiredQty, currentUserLetters);
   } else {
     newLetters = [];
     while (newLetters.length !== requiredQty) {
-      newLetters.push(
-        game.letters.pot.splice(
-          Math.floor(Math.random() * game.letters.pot.length),
-          1
-        )[0]
-      );
+      newLetters.push(pot.splice(Math.floor(Math.random() * pot.length), 1)[0]);
     }
   }
   const updatedUserLetters = currentUserLetters.concat(newLetters);
   const updatedGameLetters = {
     ...game.letters,
+    pot,
     [currentUserId]: updatedUserLetters,
   };
   return updatedGameLetters;
@@ -208,30 +213,53 @@ export const getWords = (newBoard, oldBoard) => {
 };
 
 export const rotate = (board) => {
-  return Array(15)
+  return Array(board[0].length)
     .fill(null)
     .map((_, index) => board.map((row) => row[index]));
 };
 
-const countWordScore = (wordMultiplier, wordObject, previousBoard, values) => {
+interface BonusContext {
+  boardType: string;
+  origin: BoardOrigin;
+}
+
+const countWordScore = (
+  wordMultiplier,
+  wordObject,
+  previousBoard,
+  values,
+  bonusContext: BonusContext
+) => {
   return (
     wordMultiplier *
     wordObject.word.reduce((wordScore, letter, index) => {
       let letterMultiplier = 1;
+      const bonus = getLetterBonus(
+        wordObject.y,
+        wordObject.x + index,
+        bonusContext.boardType,
+        bonusContext.origin
+      );
       if (
-        letterBonuses[wordObject.y] &&
-        letterBonuses[wordObject.y][wordObject.x + index] &&
+        bonus &&
         // check if it is not a letter of previous player
         !previousBoard[wordObject.y][wordObject.x + index]
       ) {
-        letterMultiplier = letterBonuses[wordObject.y][wordObject.x + index];
+        letterMultiplier = bonus;
       }
       return wordScore + values[letter[0]] * letterMultiplier;
     }, 0)
   );
 };
 
-export const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
+export const turnWordsAndScore = (
+  board,
+  previousBoard,
+  bonus15,
+  values,
+  boardType = "classic",
+  origin: BoardOrigin = DEFAULT_ORIGIN
+) => {
   const horizontalWords = getHorizontalWords(board, previousBoard);
   const rotatedBoard = rotate(board);
   const rotatedPreviousBoard = rotate(previousBoard);
@@ -239,12 +267,16 @@ export const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
   const horizontalTurn = getHorizontalOrVerticalTurn(
     horizontalWords,
     previousBoard,
-    values
+    values,
+    { boardType, origin }
   );
+  // the rotated pass sees transposed coordinates, so the origin components
+  // swap; the classic bonus pattern is symmetric under transposition
   const verticalTurn = getHorizontalOrVerticalTurn(
     verticalWords,
     rotatedPreviousBoard,
-    values
+    values,
+    { boardType, origin: { x: origin.y, y: origin.x } }
   );
   let bonus = 0;
   if (bonus15) {
@@ -385,19 +417,25 @@ export const getResult = (score, turns, userIds) => {
 const getHorizontalOrVerticalTurn = (
   horizontalWords,
   previousBoard,
-  values
+  values,
+  bonusContext: BonusContext
 ) => {
   return horizontalWords.reduce(
     (turn, wordObject) => {
       let wordMultiplier = 0;
       for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
+        const bonus = getWordBonus(
+          wordObject.y,
+          i,
+          bonusContext.boardType,
+          bonusContext.origin
+        );
         if (
-          wordBonuses[wordObject.y] &&
-          wordBonuses[wordObject.y][i] &&
+          bonus &&
           // check if it is not a letter of previous player
           !previousBoard[wordObject.y][i]
         ) {
-          wordMultiplier += wordBonuses[wordObject.y][i];
+          wordMultiplier += bonus;
         }
       }
       if (wordMultiplier === 0) {
@@ -407,7 +445,8 @@ const getHorizontalOrVerticalTurn = (
         wordMultiplier,
         wordObject,
         previousBoard,
-        values
+        values,
+        bonusContext
       );
       turn.score += wordScore;
       turn.words.push({

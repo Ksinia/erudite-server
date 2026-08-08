@@ -1,11 +1,16 @@
 import Game from "../models/game.js";
 import { getNextTurn, getResult, getWords, subtract } from "./game.js";
+import { growBoard } from "./board.js";
 import fetchGame from "./fetchGame.js";
 import updateGame from "./updateGame.js";
 import {
   DUPLICATED_WORDS,
   GAME_UPDATED,
 } from "../constants/outgoingMessageTypes.js";
+
+export type TurnResult =
+  | { type: typeof GAME_UPDATED; payload: { gameId: number; game: Game } }
+  | { type: typeof DUPLICATED_WORDS; payload: string[] };
 
 /**
  * Makes turn and returns updated game
@@ -16,7 +21,7 @@ export default async (
   gameId: number,
   userBoard: string[][],
   wildCardOnBoard: { [x: string]: { [x: string]: string } }
-): Promise<{ type: string; payload: { gameId: number; game: Game } }> => {
+): Promise<TurnResult> => {
   const game = await Game.findByPk(gameId);
   // check if game is in turn phase and if it is current user's turn
   if (game.phase === "turn" && game.turnOrder[game.turn] === currentUserId) {
@@ -67,8 +72,11 @@ export default async (
           ],
         });
       }
-    } else {
-      // user didn't pass
+    } else if (
+      userBoard.length === game.board.length &&
+      userBoard.every((row) => row.length === game.board[0].length)
+    ) {
+      // user didn't pass and sent a board matching the current dimensions
       const userLetters = game.letters[currentUserId].slice();
       const currentGameBoard = game.board.map((row) => row.slice());
       const wildCardsInHandQty = userLetters.filter(
@@ -194,13 +202,25 @@ export default async (
               ...game.letters,
               [currentUserId]: keepLetters,
             };
+            // an infinite board grows on every side a letter came close to,
+            // previousBoard is padded identically to stay aligned
+            let boardToSave = newBoard;
+            let previousBoardToSave = game.board;
+            let originToSave = game.boardOrigin || { x: 0, y: 0 };
+            if (game.boardType === "infinite") {
+              const grown = growBoard(newBoard, game.board, originToSave);
+              boardToSave = grown.board;
+              previousBoardToSave = grown.previousBoard;
+              originToSave = grown.origin;
+            }
             // copy game board to previous board
             // change game phase to validation
             // do not need to return passedCount to 0,
             // because the turn may be undone
             await updateGame(game, {
-              previousBoard: game.board,
-              board: newBoard,
+              previousBoard: previousBoardToSave,
+              board: boardToSave,
+              boardOrigin: originToSave,
               phase: "validation",
               letters: updatedLetters,
               // putLetters: putLetters,

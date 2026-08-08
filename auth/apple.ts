@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { canUseInfiniteBoard } from "../services/board.js";
 import appleSignin from "apple-signin-auth";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -79,6 +80,7 @@ export default function appleAuthRouterFactory(webSocketsServer: MyServer) {
           jwt,
           refreshToken,
           authMethod: "apple",
+          infiniteBoardEnabled: canUseInfiniteBoard(user.id),
         },
       };
       res.send(JSON.stringify(action));

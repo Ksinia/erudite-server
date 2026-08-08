@@ -25,7 +25,9 @@ export default async (currentUserId, gameId, validation) => {
         game.board,
         game.previousBoard,
         bonus15,
-        values
+        values,
+        game.boardType || "classic",
+        game.boardOrigin || { x: 0, y: 0 }
       );
       const previousScore = { ...game.score };
       const updatedScore = {

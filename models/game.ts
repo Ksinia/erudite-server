@@ -49,6 +49,8 @@ class Game extends Model {
   };
   declare board: (string | null)[][];
   declare previousBoard: (string | null)[][];
+  declare boardType: "classic" | "infinite";
+  declare boardOrigin: { x: number; y: number };
   declare putLetters: string[];
   declare lettersChanged: boolean;
   declare createdAt: string;
@@ -114,6 +116,14 @@ Game.init(
       defaultValue: Array(15)
         .fill(null)
         .map(() => Array(15).fill(null)),
+    },
+    boardType: {
+      type: DataTypes.STRING,
+      defaultValue: "classic",
+    },
+    boardOrigin: {
+      type: DataTypes.JSONB,
+      defaultValue: { x: 0, y: 0 },
     },
     putLetters: { type: DataTypes.JSONB, defaultValue: [] },
     previousLetters: { type: DataTypes.JSONB, defaultValue: [] },

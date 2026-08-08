@@ -14,6 +14,7 @@ import {
 } from "./services/chat.js";
 import registerVisit from "./services/visit.js";
 import { fetchGames } from "./services/lobby.js";
+import { canSeeGame } from "./services/board.js";
 import {
   ALL_GAMES,
   ALL_MESSAGES,
@@ -148,7 +149,7 @@ const addUserToSocket = async (
   } catch (error) {
     console.log("problem retrieving user:", error);
     if (error instanceof Error && error.name === "TokenExpiredError") {
-      socket.emit("message", { type: TOKEN_EXPIRED });
+      socket.emit("message", { type: TOKEN_EXPIRED, payload: null });
     } else {
       const errorMessage =
         error instanceof Error
@@ -217,6 +218,10 @@ const addGameToSocket = async (
   gameId: number
 ) => {
   if (!gameId) return;
+  // restricted infinite games are invisible: don't let the socket join
+  // the game room and receive its updates
+  const game = await Game.findByPk(gameId, { attributes: ["boardType"] });
+  if (game && !canSeeGame(game, socket.data.playerId)) return;
   socket.leave("lobby");
   if (socket.data.gameId) {
     socket.leave(socket.data.gameId.toString());
@@ -266,7 +271,7 @@ const enterLobby = async (_: MyServer, socket: MySocket) => {
   try {
     const count = await countAllMessagesInLobby(socket.data.playerId);
     socket.emit("message", { type: MESSAGES_COUNT, payload: count });
-    const games = await fetchGames();
+    const games = await fetchGames(socket.data.playerId);
     socket.emit("message", { type: ALL_GAMES, payload: games });
   } catch (error) {
     console.log(error);
