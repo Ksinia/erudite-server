@@ -459,15 +459,21 @@ const getHorizontalOrVerticalTurn = (
   );
 };
 
-export const sendTurnNotification = (playerId, gameId) => {
+export const sendTurnNotification = (playerId, gameId, boardType?: string) => {
   notify(playerId, {
     title: `Your turn in game ${gameId}!`,
     gameId,
+    skipMobile: boardType === "infinite",
   });
 };
 
-export const sendDisapproveNotification = (playerId, gameId) => {
+export const sendDisapproveNotification = (
+  playerId,
+  gameId,
+  boardType?: string
+) => {
   notify(playerId, {
+    skipMobile: boardType === "infinite",
     title: `Your turn in game ${gameId} is not approved`,
     message: `Please undo your turn and make another one`,
     gameId,

@@ -99,7 +99,7 @@ export const getUpdatedGameForLobby = (game): LobbyGameAction => {
 
 export const fetchGames = async (
   userId?: number,
-  clientSupportsInfiniteBoard = true
+  clientSupportsInfiniteBoard = false
 ) => {
   const games = await Game.findAll({
     attributes: [

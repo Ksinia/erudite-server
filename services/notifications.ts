@@ -31,11 +31,20 @@ export async function addSubscription(userId, subscriptionDetails, userAgent) {
 
 export async function notify(
   userId: number,
-  { title, message = undefined, gameId, type = undefined as string | undefined }
+  {
+    title,
+    message = undefined,
+    gameId,
+    type = undefined as string | undefined,
+    // set for games a mobile build cannot open: notifying a phone would
+    // send it to a screen it cannot render, and the early return below
+    // would also cost this user their web notification
+    skipMobile = false,
+  }
 ) {
   try {
     // First, try Expo push notification (for React Native clients)
-    const expoPushToken = getPushToken(userId);
+    const expoPushToken = skipMobile ? undefined : getPushToken(userId);
     if (expoPushToken) {
       console.log(`Sending Expo push notification to user ${userId}`);
       try {

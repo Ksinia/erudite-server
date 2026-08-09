@@ -48,11 +48,19 @@ test("classic board keeps the original bonus tables", () => {
 });
 
 test("infinite board reproduces the classic layout at the origin", () => {
-  for (let y = 0; y < CLASSIC_BOARD_SIZE - 1; y++) {
-    for (let x = 0; x < CLASSIC_BOARD_SIZE - 1; x++) {
+  // the whole classic square, including row and column 14, which the tiling
+  // aliases onto 0: that aliasing is what makes the shared seam work
+  for (let y = 0; y < CLASSIC_BOARD_SIZE; y++) {
+    for (let x = 0; x < CLASSIC_BOARD_SIZE; x++) {
       assert.equal(
         getWordBonus(y, x, "infinite", ORIGIN),
-        wordBonuses[y] && wordBonuses[y][x]
+        wordBonuses[y] && wordBonuses[y][x],
+        `word bonus at ${y},${x}`
+      );
+      assert.equal(
+        getLetterBonus(y, x, "infinite", ORIGIN),
+        letterBonuses[y] && letterBonuses[y][x],
+        `letter bonus at ${y},${x}`
       );
     }
   }
@@ -108,6 +116,37 @@ test("a board grows on every side a letter comes close to", () => {
   assert.equal(result.previousBoard[0].length, result.board[0].length);
 });
 
+test("a board grows towards the bottom and the right as well", () => {
+  const board = withLetters(15, 15, [
+    [12, 12],
+    [13, 13],
+  ]);
+  const result = growBoard(board, empty(15, 15), ORIGIN);
+  assert.equal(result.board.length, 22);
+  assert.equal(result.board[0].length, 22);
+  // padding went to the far side, so the origin does not move
+  assert.deepEqual(result.origin, ORIGIN);
+  assert.equal(result.board[13][13], "а");
+});
+
+test("a board short of room splits what is left between both sides", () => {
+  // letters near both edges of a board that is already close to the cap
+  const size = MAX_BOARD_SIZE - 4;
+  const board = withLetters(size, size, [
+    [1, 1],
+    [size - 2, size - 2],
+  ]);
+  const result = growBoard(board, empty(size, size), ORIGIN);
+  assert.ok(
+    result.board.length <= MAX_BOARD_SIZE &&
+      result.board[0].length <= MAX_BOARD_SIZE,
+    `stays within the cap, got ${result.board.length}x${result.board[0].length}`
+  );
+  // the two cells of room left are shared, one to each side
+  assert.deepEqual(result.origin, { x: 2, y: 2 });
+  assert.equal(result.board.length, MAX_BOARD_SIZE);
+});
+
 test("a growing board keeps a free rack beyond the letters, up to the cap", () => {
   let board = withLetters(15, 15, [[7, 7]]);
   let previousBoard = empty(15, 15);
@@ -160,6 +199,7 @@ test("a growing board keeps a free rack beyond the letters, up to the cap", () =
 });
 
 test("access is closed until user ids are listed", () => {
+  const previous = process.env.INFINITE_BOARD_USERS;
   const infinite = { boardType: "infinite" };
   const classic = { boardType: "classic" };
 
@@ -186,8 +226,17 @@ test("access is closed until user ids are listed", () => {
   assert.equal(canUseInfiniteBoard(4), true);
   assert.equal(canUseInfiniteBoard(1), false);
   assert.equal(canUseInfiniteBoard(undefined), false);
-  assert.equal(canSeeGame(infinite, 4), true);
-  assert.equal(canSeeGame(infinite, 1), false);
+  assert.equal(canSeeGame(infinite, 4, true), true);
+  assert.equal(canSeeGame(infinite, 1, true), false);
+  // an allowed account on a client that cannot draw the board is still refused
+  assert.equal(canSeeGame(infinite, 4, false), false);
+  // and the default is refusal rather than permission
+  assert.equal(canSeeGame(infinite, 4), false);
+  assert.equal(canSeeGame(classic, 4), true);
 
-  delete process.env.INFINITE_BOARD_USERS;
+  if (previous === undefined) {
+    delete process.env.INFINITE_BOARD_USERS;
+  } else {
+    process.env.INFINITE_BOARD_USERS = previous;
+  }
 });

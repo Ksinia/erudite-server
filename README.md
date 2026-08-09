@@ -25,7 +25,7 @@ A game can be created with `boardType: "infinite"` (the default is `"classic"`).
 
 The feature is closed by default. The `INFINITE_BOARD_USERS` environment variable lists the user ids allowed to create, see and join infinite games, comma-separated (for example `INFINITE_BOARD_USERS=3,4`). While it is unset or empty nobody has access: infinite games are hidden from the lobby, cannot be opened or joined, and the board type selector stays hidden in the clients.
 
-Access also depends on the client. A client declares what it can handle through the `X-Client-Features` header on requests and through the `features` field of `ADD_USER_TO_SOCKET` on the socket; a build that does not declare `infinite-board` is treated like an account without access, so an older app is never handed a board it cannot draw. Clients that declare it receive infinite games with the two grids replaced by their occupied cells (`boardSize`, `boardCells`, `previousBoardCells`), because a full grid costs the square of its side on every update. Classic games keep their plain grids for every client.
+Access also depends on the client. A client declares what it can handle through the `X-Client-Features` header on requests and through the `features` field of `ADD_USER_TO_SOCKET` on the socket; a build that does not declare `infinite-board` is treated like an account without access, so an older app is never handed a board it cannot draw, and is not notified about such games either. Clients that declare it receive infinite games with the two grids replaced by their occupied cells (`boardSize`, `boardCells`, `previousBoardCells`), because a full grid costs the square of its side on every update. Classic games keep their plain grids for every client.
 
 ## Tests
 

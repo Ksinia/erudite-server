@@ -45,7 +45,7 @@ export default function factory(webSocketsServer: MyServer) {
     game: { boardType?: string | null },
     action: LobbyGameAction
   ) => {
-    if (canSeeGame(game)) {
+    if (canSeeGame(game, null, false)) {
       webSocketsServer.to("lobby").emit("message", action);
     }
   };
@@ -70,12 +70,15 @@ export default function factory(webSocketsServer: MyServer) {
           .status(400)
           .send({ message: "boardType must be classic or infinite" });
       }
+      if (playersIds !== undefined && !Array.isArray(playersIds)) {
+        return res.status(400).send({ message: "players must be an array" });
+      }
       if (boardType === "infinite") {
         // every player must have access, otherwise the game would be
         // invisible to someone it waits for
         const participants = [
           currentUser.id,
-          ...(Array.isArray(playersIds) ? playersIds.map(Number) : []),
+          ...(playersIds ? playersIds.map(Number) : []),
         ];
         if (participants.some((id) => !canUseInfiniteBoard(id))) {
           return res.status(403).send({
@@ -142,9 +145,22 @@ export default function factory(webSocketsServer: MyServer) {
     "/start/:id",
     authMiddleware,
     validateGameId,
-    async (req: RequestWithGameId, res, nxt) => {
+    async (req: RequestWithAdditionalFields, res, nxt) => {
       const gameId = req.gameId;
       try {
+        const gameToStart = await Game.findByPk(gameId, {
+          attributes: ["boardType"],
+        });
+        if (
+          gameToStart &&
+          !canSeeGame(
+            gameToStart,
+            req.user.id,
+            clientSupportsInfiniteBoard(req)
+          )
+        ) {
+          return res.status(404).send({ message: "game not found" });
+        }
         const updatedGame = await startGame(gameId);
         const updatedGameAction = gameUpdatedAction(gameId, updatedGame);
         webSocketsServer
@@ -152,7 +168,11 @@ export default function factory(webSocketsServer: MyServer) {
           .emit("message", updatedGameAction);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
-        sendTurnNotification(updatedGame.activeUserId, gameId);
+        sendTurnNotification(
+          updatedGame.activeUserId,
+          gameId,
+          updatedGame.boardType
+        );
         res.sendStatus(204);
       } catch (error) {
         nxt(error);
@@ -245,7 +265,8 @@ export default function factory(webSocketsServer: MyServer) {
         // every time after a turn we need to inform the next player about their turn
         sendTurnNotification(
           updatedGameAction.payload.game.activeUserId,
-          gameId
+          gameId,
+          updatedGameAction.payload.game.boardType
         );
       } catch (error) {
         next(error);
@@ -273,7 +294,11 @@ export default function factory(webSocketsServer: MyServer) {
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
         if (validation === "no") {
-          sendDisapproveNotification(updatedGame.activeUserId, gameId);
+          sendDisapproveNotification(
+            updatedGame.activeUserId,
+            gameId,
+            updatedGame.boardType
+          );
         }
         res.sendStatus(204);
       } catch (error) {
@@ -322,7 +347,11 @@ export default function factory(webSocketsServer: MyServer) {
         webSocketsServer.to(gameId.toString()).emit("message", action);
         const lobbyAction = getUpdatedGameForLobby(updatedGame);
         emitToLobby(updatedGame, lobbyAction);
-        sendTurnNotification(updatedGame.activeUserId, gameId);
+        sendTurnNotification(
+          updatedGame.activeUserId,
+          gameId,
+          updatedGame.boardType
+        );
         res.sendStatus(204);
       } catch (error) {
         next(error);

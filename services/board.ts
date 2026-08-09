@@ -12,9 +12,9 @@ export const EDGE_MARGIN = RACK_SIZE;
 export const GROWTH_STEP = RACK_SIZE;
 /**
  * Upper bound on either dimension. The board is meant to feel unbounded,
- * but every update ships both boards in full, so a game drifting outward
- * for hundreds of turns would grow the payload without limit. At this size
- * the far edges behave like the edges of a classic board.
+ * but it is stored as a grid in one row and drawn as a grid by the client,
+ * so a game drifting outward for hundreds of turns would keep enlarging
+ * both. At this size the far edges behave like the edges of a classic board.
  */
 export const MAX_BOARD_SIZE = 99;
 
@@ -47,7 +47,7 @@ export const canUseInfiniteBoard = (userId?: number | null): boolean => {
 export const canSeeGame = (
   game: { boardType?: string | null },
   userId?: number | null,
-  clientSupportsInfiniteBoard = true
+  clientSupportsInfiniteBoard = false
 ): boolean => {
   return (
     game.boardType !== "infinite" ||

@@ -23,7 +23,6 @@ import {
 import {
   ALL_GAMES,
   ALL_MESSAGES,
-  GAME_UPDATED,
   LOGIN_OR_SIGNUP_ERROR,
   MESSAGES_COUNT,
   NEW_MESSAGE,
@@ -98,6 +97,12 @@ const receiveSaveAndSendNewMessage = async (
     return; // Don't continue with notifications if message failed
   }
   try {
+    // a phone cannot open an infinite game, so a chat notification would
+    // only send it to a screen it cannot render
+    const chatGame = await Game.findByPk(socket.data.gameId, {
+      attributes: ["boardType"],
+    });
+    const skipMobile = chatGame && chatGame.boardType === "infinite";
     const usersOfThisGame = await User.findAll({
       include: {
         model: Game,
@@ -116,6 +121,7 @@ const receiveSaveAndSendNewMessage = async (
             message: `${socket.data.user.name} in game ${socket.data.gameId}: ${payload}`,
             gameId: socket.data.gameId,
             type: "chat_message",
+            skipMobile,
           });
           const clients = await Promise.all(getClientsByPlayerId(user.id));
           clients
