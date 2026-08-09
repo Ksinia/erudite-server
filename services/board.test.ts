@@ -88,6 +88,52 @@ test("bonus lookup follows the origin", () => {
   const shifted = { x: 5, y: 3 };
   assert.equal(getWordBonus(3, 5, "infinite", shifted), 3);
   assert.equal(getLetterBonus(3 + 1, 5 + 5, "infinite", shifted), 3);
+  // cells above and to the left of the origin hand the tiling a negative
+  // coordinate, which is the ordinary case once a board has grown
+  const cells: [number, number][] = [
+    [3, 5],
+    [4, 10],
+    [10, 12],
+    [0, 0],
+  ];
+  cells.forEach(([y, x]) => {
+    assert.equal(
+      getWordBonus(y - PATTERN_PERIOD, x - PATTERN_PERIOD, "infinite", shifted),
+      getWordBonus(y, x, "infinite", shifted),
+      `word bonus one tile up and left of ${y},${x}`
+    );
+    assert.equal(
+      getLetterBonus(
+        y - PATTERN_PERIOD,
+        x - PATTERN_PERIOD,
+        "infinite",
+        shifted
+      ),
+      getLetterBonus(y, x, "infinite", shifted),
+      `letter bonus one tile up and left of ${y},${x}`
+    );
+  });
+});
+
+test("the last cells of room go to one side rather than nowhere", () => {
+  // a board one cell short of the cap with letters close to both edges:
+  // splitting the single cell evenly would round to nothing and freeze it
+  const size = MAX_BOARD_SIZE - 1;
+  const board = withLetters(size, size, [
+    [6, 6],
+    [size - 7, size - 7],
+  ]);
+  const result = growBoard(board, empty(size, size), ORIGIN);
+  assert.equal(result.board.length, MAX_BOARD_SIZE, "grew into the last cell");
+  assert.equal(result.board[0].length, MAX_BOARD_SIZE);
+  // the cell went to one side, so exactly one of the two moved
+  assert.ok(
+    (result.origin.y === 1 && result.origin.x === 1) ||
+      (result.origin.y === 0 && result.origin.x === 0),
+    `origin moved by the padding actually applied: ${JSON.stringify(
+      result.origin
+    )}`
+  );
 });
 
 test("a board with letters far from the edges does not grow", () => {

@@ -183,6 +183,13 @@ const addUserToSocket = async (
     return;
   }
   if (user) {
+    // whoever was here before may have been in a room this account cannot
+    // see: give the room up and let the check below decide again
+    if (socket.data.playerId !== user.id && socket.data.gameId) {
+      socket.leave(socket.data.gameId.toString());
+      socket.data.pendingGameId = socket.data.gameId;
+      delete socket.data.gameId;
+    }
     socket.data.playerId = user.id;
     socket.data.user = user;
     addPlayerClient(socket);
@@ -199,8 +206,12 @@ const addUserToSocket = async (
     if (pushToken) {
       storePushToken(user.id, pushToken);
     }
+    let joinedOnRetry = false;
     if (socket.data.pendingGameId) {
-      await addGameToSocket(_, socket, socket.data.pendingGameId);
+      const pending = socket.data.pendingGameId;
+      await addGameToSocket(_, socket, pending);
+      // addGameToSocket has already sent this game's history
+      joinedOnRetry = socket.data.gameId === pending;
     }
     try {
       const count = await countAllMessagesInLobby(user.id);
@@ -208,15 +219,32 @@ const addUserToSocket = async (
       // if user was on a game page but not logged in, and then he logs in we need to send him more full game object
       if (socket.data.gameId) {
         const game = await fetchGame(socket.data.gameId);
-        socket.emit("message", gameUpdatedAction(socket.data.gameId, game));
-        const allMessages = await getAllMessagesInGame(
-          socket.data.gameId,
-          user.id
-        );
-        if (allMessages.length > 0) {
-          socket.emit("message", { type: ALL_MESSAGES, payload: allMessages });
+        if (
+          game &&
+          !canSeeGame(
+            game,
+            user.id,
+            supportsInfiniteBoard(socket.data.features)
+          )
+        ) {
+          socket.leave(socket.data.gameId.toString());
+          delete socket.data.gameId;
+        } else {
+          socket.emit("message", gameUpdatedAction(socket.data.gameId, game));
+          if (!joinedOnRetry) {
+            const allMessages = await getAllMessagesInGame(
+              socket.data.gameId,
+              user.id
+            );
+            if (allMessages.length > 0) {
+              socket.emit("message", {
+                type: ALL_MESSAGES,
+                payload: allMessages,
+              });
+            }
+          }
+          await registerVisit(socket.data.gameId, user.id);
         }
-        await registerVisit(socket.data.gameId, user.id);
       }
     } catch (error) {
       console.log(error);
@@ -246,6 +274,12 @@ const addGameToSocket = async (
     )
   ) {
     socket.data.pendingGameId = gameId;
+    // the client has moved on to this game, so it must not keep chatting
+    // into the room it came from
+    if (socket.data.gameId) {
+      socket.leave(socket.data.gameId.toString());
+      delete socket.data.gameId;
+    }
     return;
   }
   delete socket.data.pendingGameId;

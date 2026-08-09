@@ -39,14 +39,36 @@ interface RequestBody {
 export default function factory(webSocketsServer: MyServer) {
   const router = Router();
 
-  // while infinite-board access is restricted, infinite games are kept out
-  // of the shared lobby room: its audience includes arbitrary users
+  /**
+   * The lobby room holds arbitrary sockets, so a restricted game cannot be
+   * broadcast to it wholesale. It is sent to each socket that may see it
+   * instead, which is what lets an allowed player watch such a game appear,
+   * fill up and change phase like any other.
+   */
   const emitToLobby = (
     game: { boardType?: string | null },
-    action: LobbyGameAction
+    action: LobbyGameAction | { type: string; payload: number }
   ) => {
     if (canSeeGame(game, null, false)) {
       webSocketsServer.to("lobby").emit("message", action);
+      return;
+    }
+    const lobby = webSocketsServer.sockets.adapter.rooms.get("lobby");
+    if (!lobby) {
+      return;
+    }
+    for (const socketId of lobby) {
+      const target = webSocketsServer.sockets.sockets.get(socketId);
+      if (
+        target &&
+        canSeeGame(
+          game,
+          target.data.playerId,
+          supportsInfiniteBoard(target.data.features)
+        )
+      ) {
+        target.emit("message", action);
+      }
     }
   };
 
@@ -83,6 +105,11 @@ export default function factory(webSocketsServer: MyServer) {
         if (participants.some((id) => !canUseInfiniteBoard(id))) {
           return res.status(403).send({
             message: "infinite board is not available for all players",
+          });
+        }
+        if (!clientSupportsInfiniteBoard(req)) {
+          return res.status(403).send({
+            message: "this client cannot show an infinite board",
           });
         }
       }
@@ -195,7 +222,7 @@ export default function factory(webSocketsServer: MyServer) {
           game &&
           canSeeGame(
             game,
-            getOptionalUserId(req),
+            await getOptionalUserId(req),
             clientSupportsInfiniteBoard(req)
           )
             ? game
@@ -254,7 +281,7 @@ export default function factory(webSocketsServer: MyServer) {
             payload: gameId,
           };
           await sendFinishedGameNotifications(gameId);
-          webSocketsServer.to("lobby").emit("message", deleteGameAction);
+          emitToLobby(updatedGameAction.payload.game, deleteGameAction);
         } else {
           const lobbyAction = getUpdatedGameForLobby(
             updatedGameAction.payload.game

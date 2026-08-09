@@ -1,7 +1,6 @@
 import Game from "../models/game.js";
 import User from "../models/user.js";
-import { getNextTurn, giveLetters, shuffle, subtract } from "./game.js";
-import lettersSets from "../constants/letterSets/index.js";
+import { getNextTurn, giveLetters, subtract } from "./game.js";
 import updateGame from "./updateGame.js";
 
 /**
@@ -20,15 +19,11 @@ export default async (currentUserId, gameId, lettersToChange) => {
     // subtract letters to change
     const previousUserLetters = game.letters[currentUserId];
     const remainingLetters = subtract(previousUserLetters, lettersToChange);
-    // an infinite game never runs out of letters: refill the pot with
-    // another complete set once it cannot cover the exchange
-    let pot = game.letters.pot;
-    if (game.boardType === "infinite" && pot.length < lettersToChange.length) {
-      pot = pot.concat(shuffle(lettersSets[game.language].letters.slice()));
-    }
-    // give new letters to user
+    // giveLetters puts the letters being exchanged back into the bag before
+    // drawing, so the draw can never come up short and an infinite game
+    // needs no extra set here; the bag is refilled when a rack is topped up
     const updatedBagAndUserLetters = giveLetters(
-      pot,
+      game.letters.pot,
       remainingLetters,
       lettersToChange,
       currentUserId

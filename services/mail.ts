@@ -4,6 +4,7 @@ import User from "../models/user.js";
 import Game_User from "../models/game_user.js";
 import Sequelize from "sequelize";
 import { notify } from "./notifications.js";
+import { canSeeGame } from "./board.js";
 import { clientUrl, fromEmail, resendApiKey } from "../constants/runtime.js";
 
 const resend = new Resend(resendApiKey);
@@ -66,7 +67,7 @@ export const sendActiveGameNotifications = async () => {
       include: {
         model: Game,
         as: "games",
-        attributes: ["id", "activeUserId", "phase"],
+        attributes: ["id", "activeUserId", "phase", "boardType"],
         through: {
           model: Game_User,
           where: {
@@ -99,7 +100,11 @@ export const sendActiveGameNotifications = async () => {
     await Promise.all(
       users.map(async (user) => {
         const filteredGames = user.games.filter(
-          (game) => game.activeUserId === user.id
+          (game) =>
+            game.activeUserId === user.id &&
+            // the letter links into the web client, which this account may
+            // not be allowed to open the game in
+            canSeeGame(game, user.id, true)
         );
         if (filteredGames.length > 0) {
           if (user.email && user.emailConfirmed) {

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Request, Router } from "express";
 import Game from "../models/game.js";
 import User from "../models/user.js";
 import { Sequelize } from "../models/index.js";
@@ -7,6 +7,11 @@ import { login } from "../auth/router.js";
 import authMiddleware from "../auth/middleware.js";
 import { toData, toJWT } from "../auth/jwt.js";
 import { clientUrl } from "../constants/runtime.js";
+import { canSeeGame } from "../services/board.js";
+import {
+  parseClientFeatures,
+  supportsInfiniteBoard,
+} from "../services/gamePayload.js";
 import {
   sendEmailConfirmationLink,
   sendPasswordResetLink,
@@ -229,6 +234,7 @@ router.get(
           "maxPlayers",
           "result",
           "turns",
+          "boardType",
         ],
         include: [
           {
@@ -239,10 +245,14 @@ router.get(
         ],
       });
       res.send(
-        games.map((game) => {
-          const { turns, ...rest } = game.toJSON();
-          return { ...rest, centerWord: getFirstTurnWord(turns) };
-        })
+        games
+          .filter((game) =>
+            canSeeGame(game, currentUser.id, clientSupportsInfiniteBoard(req))
+          )
+          .map((game) => {
+            const { turns, ...rest } = game.toJSON();
+            return { ...rest, centerWord: getFirstTurnWord(turns) };
+          })
       );
     } catch (error) {
       next(error);
@@ -273,6 +283,7 @@ router.get(
           "turn",
           "activeUserId",
           "turns",
+          "boardType",
         ],
         include: [
           {
@@ -290,10 +301,14 @@ router.get(
         }
       });
       res.send(
-        sortedGames.map((game) => {
-          const { turns, ...rest } = game.toJSON();
-          return { ...rest, centerWord: getFirstTurnWord(turns) };
-        })
+        sortedGames
+          .filter((game) =>
+            canSeeGame(game, currentUser.id, clientSupportsInfiniteBoard(req))
+          )
+          .map((game) => {
+            const { turns, ...rest } = game.toJSON();
+            return { ...rest, centerWord: getFirstTurnWord(turns) };
+          })
       );
     } catch (error) {
       next(error);
@@ -442,3 +457,11 @@ router.post(
 );
 
 export default router;
+
+function clientSupportsInfiniteBoard(req: {
+  headers: Request["headers"];
+}): boolean {
+  return supportsInfiniteBoard(
+    parseClientFeatures(req.headers["x-client-features"])
+  );
+}

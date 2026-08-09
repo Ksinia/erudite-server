@@ -80,7 +80,9 @@ export default async (
     ) {
       // the board grew after the client rendered it, so these coordinates
       // mean something else now: tell the client to refetch instead of
-      // silently dropping the turn
+      // silently dropping the turn. Comparing dimensions is enough only
+      // because a board never shrinks: growBoard only ever pads, and undo
+      // and a rejected turn both restore an identically padded previousBoard
       return { type: BOARD_OUT_OF_DATE, payload: { gameId } };
     } else {
       // user didn't pass and sent a board matching the current dimensions

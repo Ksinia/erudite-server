@@ -131,18 +131,22 @@ export const growBoard = (
   const wantBottom = height - 1 - maxY < EDGE_MARGIN;
   const wantLeft = minX < EDGE_MARGIN;
   const wantRight = width - 1 - maxX < EDGE_MARGIN;
-  const verticalStep = Math.min(
-    GROWTH_STEP,
-    Math.floor(verticalRoom / ((wantTop ? 1 : 0) + (wantBottom ? 1 : 0) || 1))
-  );
-  const horizontalStep = Math.min(
-    GROWTH_STEP,
-    Math.floor(horizontalRoom / ((wantLeft ? 1 : 0) + (wantRight ? 1 : 0) || 1))
-  );
-  const padTop = wantTop ? verticalStep : 0;
-  const padBottom = wantBottom ? verticalStep : 0;
-  const padLeft = wantLeft ? horizontalStep : 0;
-  const padRight = wantRight ? horizontalStep : 0;
+  // the last cells of room go to one side rather than being divided into
+  // nothing, which would leave the board frozen just short of the cap
+  const share = (room: number, first: boolean, second: boolean) => {
+    const sides = (first ? 1 : 0) + (second ? 1 : 0);
+    if (sides === 0 || room === 0) {
+      return [0, 0];
+    }
+    const each = Math.min(GROWTH_STEP, Math.floor(room / sides));
+    const leftover = Math.min(GROWTH_STEP - each, room - each * sides);
+    return [
+      first ? each + (second ? leftover : 0) : 0,
+      second ? each + (first ? 0 : leftover) : 0,
+    ];
+  };
+  const [padTop, padBottom] = share(verticalRoom, wantTop, wantBottom);
+  const [padLeft, padRight] = share(horizontalRoom, wantLeft, wantRight);
   if (!padTop && !padBottom && !padLeft && !padRight) {
     return { board, previousBoard, origin };
   }
