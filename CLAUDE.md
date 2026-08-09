@@ -38,6 +38,13 @@ A crashed dyno answers 503 with `code=H10` in the router log; the reason is
 only in `--source app`. `heroku rollback` restores the previous release in
 seconds and is the right first move while the cause is being found.
 
+**Once any infinite game exists, do not roll back past migration 32.** Those
+games have boards larger than 15x15, and the `rotate()` on older code is
+hardcoded to `Array(15)`, so scoring would be wrong or throw. The migration's
+`down` also drops `boardOrigin`, which anchors the bonus pattern and cannot
+be reconstructed from anything else. Roll back to a release that still has
+the column, or fix forward.
+
 ## Configuration
 
 Environment variables come from two places, and the order matters:
