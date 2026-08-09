@@ -410,18 +410,29 @@ function clientSupportsInfiniteBoard(req: {
   );
 }
 
-function getOptionalUserId(req: {
+/**
+ * The id behind an optional Authorization header, for routes that carry no
+ * auth middleware. The account is loaded and checked the way the middleware
+ * checks it, so a token that outlived its account reads as a stranger here
+ * too rather than keeping access to a restricted game.
+ */
+async function getOptionalUserId(req: {
   headers: { authorization?: string };
-}): number | undefined {
+}): Promise<number | undefined> {
   const header = req.headers.authorization;
-  if (header && header.startsWith("Bearer ")) {
-    try {
-      return toData(header.substring(7)).userId;
-    } catch {
+  if (!header || !header.startsWith("Bearer ")) {
+    return undefined;
+  }
+  try {
+    const { userId } = toData(header.substring(7));
+    const user = await User.findByPk(userId, { attributes: ["id", "name"] });
+    if (!user || /^\[deleted_\d+\]$/.test(user.name)) {
       return undefined;
     }
+    return user.id;
+  } catch {
+    return undefined;
   }
-  return undefined;
 }
 
 function validateGameId(
