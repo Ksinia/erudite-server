@@ -4,6 +4,7 @@ import User from "../models/user.js";
 import { Sequelize } from "../models/index.js";
 import bcrypt from "bcrypt";
 import authMiddleware from "./middleware.js";
+import { canUseInfiniteBoard } from "../services/board.js";
 import { LOGIN_SUCCESS } from "../constants/outgoingMessageTypes.js";
 import { RequestWithUser } from "../routers/game";
 import {
@@ -45,6 +46,7 @@ export async function login(res, next, name = null, password = null) {
             jwt,
             refreshToken,
             authMethod: currentUser.appleId ? "apple" : "password",
+            infiniteBoardEnabled: canUseInfiniteBoard(currentUser.id),
           },
         };
         const string = JSON.stringify(action);
@@ -94,6 +96,7 @@ router.post("/refresh", async (req, res) => {
         jwt: result.jwt,
         refreshToken: result.refreshToken,
         authMethod: user.appleId ? "apple" : "password",
+        infiniteBoardEnabled: canUseInfiniteBoard(user.id),
       },
     };
     res.send(JSON.stringify(action));
@@ -114,6 +117,7 @@ router.get("/profile", authMiddleware, async (req: RequestWithUser, res) => {
       email: currentUser.email || "",
       jwt: jwt,
       authMethod: currentUser.appleId ? "apple" : "password",
+      infiniteBoardEnabled: canUseInfiniteBoard(currentUser.id),
     },
   };
   const string = JSON.stringify(action);

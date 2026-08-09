@@ -2,9 +2,12 @@ import Game from "../models/game.js";
 import User from "../models/user.js";
 import Sequelize from "sequelize";
 import { UPDATED_GAME_IN_LOBBY } from "../constants/outgoingMessageTypes.js";
+import { canSeeGame } from "./board.js";
 
 export function getFirstTurnWord(
-  turns: { words: { [key: string]: number }[] }[] | undefined
+  turns:
+    | { words: { [key: string]: number }[]; changedLetters?: boolean }[]
+    | undefined
 ): string {
   if (!turns || turns.length === 0) return "";
   const firstTurn = turns.find(
@@ -39,11 +42,30 @@ export const archiveOldGames = async () => {
   }
 };
 
+export interface LobbyGame {
+  id: number;
+  phase: string;
+  turnOrder: number[] | null;
+  turn: number | null;
+  validated: string;
+  language: string;
+  maxPlayers: number;
+  users: { id: number; name: string }[];
+  activeUserId: number | null;
+  boardType?: string;
+  centerWord: string;
+}
+
+export interface LobbyGameAction {
+  type: typeof UPDATED_GAME_IN_LOBBY;
+  payload: LobbyGame;
+}
+
 /**
  * Extracts properties needed for lobby from the game object
  * @returns action for updated game in lobby
  */
-export const getUpdatedGameForLobby = (game) => {
+export const getUpdatedGameForLobby = (game): LobbyGameAction => {
   const {
     id,
     phase,
@@ -54,6 +76,7 @@ export const getUpdatedGameForLobby = (game) => {
     maxPlayers,
     users,
     activeUserId,
+    boardType,
   } = game;
   const lobbyGame = {
     id,
@@ -65,6 +88,7 @@ export const getUpdatedGameForLobby = (game) => {
     maxPlayers,
     users,
     activeUserId,
+    boardType,
     centerWord: getFirstTurnWord(game.turns),
   };
   return {
@@ -73,7 +97,10 @@ export const getUpdatedGameForLobby = (game) => {
   };
 };
 
-export const fetchGames = async () => {
+export const fetchGames = async (
+  userId?: number,
+  clientSupportsInfiniteBoard = false
+) => {
   const games = await Game.findAll({
     attributes: [
       "id",
@@ -84,6 +111,7 @@ export const fetchGames = async () => {
       "language",
       "maxPlayers",
       "activeUserId",
+      "boardType",
       "turns",
     ],
     where: {
@@ -100,9 +128,11 @@ export const fetchGames = async () => {
       },
     ],
   });
-  return games.map((game) => {
-    const json = game.toJSON();
-    const { turns, ...rest } = json;
-    return { ...rest, centerWord: getFirstTurnWord(turns) };
-  });
+  return games
+    .filter((game) => canSeeGame(game, userId, clientSupportsInfiniteBoard))
+    .map((game) => {
+      const json = game.toJSON();
+      const { turns, ...rest } = json;
+      return { ...rest, centerWord: getFirstTurnWord(turns) };
+    });
 };

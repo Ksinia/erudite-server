@@ -11,7 +11,8 @@ export default async (
   currentUser: User,
   maxPlayers: number,
   playersIds: number[],
-  language: string
+  language: string,
+  boardType = "classic"
 ) => {
   let users = [];
   let phase = "waiting";
@@ -25,7 +26,7 @@ export default async (
   } else {
     users = [currentUser];
   }
-  const game = await Game.create({ maxPlayers, language, phase });
+  const game = await Game.create({ maxPlayers, language, phase, boardType });
   // currently it's impossible to create with existing association
   await game.setUsers(users);
   return Game.findByPk(game.id, {
@@ -37,6 +38,7 @@ export default async (
       "validated",
       "language",
       "maxPlayers",
+      "boardType",
     ],
     include: [
       {

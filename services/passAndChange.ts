@@ -19,7 +19,9 @@ export default async (currentUserId, gameId, lettersToChange) => {
     // subtract letters to change
     const previousUserLetters = game.letters[currentUserId];
     const remainingLetters = subtract(previousUserLetters, lettersToChange);
-    // give new letters to user
+    // giveLetters puts the letters being exchanged back into the bag before
+    // drawing, so the draw can never come up short and an infinite game
+    // needs no extra set here; the bag is refilled when a rack is topped up
     const updatedBagAndUserLetters = giveLetters(
       game.letters.pot,
       remainingLetters,

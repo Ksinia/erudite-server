@@ -1,4 +1,11 @@
-import { letterBonuses, wordBonuses } from "../constants/bonuses.js";
+import {
+  BoardOrigin,
+  DEFAULT_ORIGIN,
+  getLetterBonus,
+  getWordBonus,
+  RACK_SIZE,
+} from "./board.js";
+import lettersSets from "../constants/letterSets/index.js";
 import { notify } from "./notifications.js";
 
 export const BALANCED_USER_ID = 3;
@@ -88,31 +95,30 @@ export const getNextTurn = (game) => {
 export const updateGameLetters = (game) => {
   const currentUserId = game.turnOrder[game.turn];
   const currentUserLetters = game.letters[currentUserId];
-  let requiredQty = 7 - currentUserLetters.length;
-  if (game.letters.pot.length < requiredQty) {
-    requiredQty = game.letters.pot.length;
+  let pot = game.letters.pot;
+  let requiredQty = RACK_SIZE - currentUserLetters.length;
+  // an infinite game never runs out of letters: when the pot can no longer
+  // refill the rack, another complete letter set is poured in, so the
+  // original letters are spent evenly before the new ones mix in
+  if (game.boardType === "infinite" && pot.length < requiredQty) {
+    pot = pot.concat(shuffle(lettersSets[game.language].letters.slice()));
+  }
+  if (pot.length < requiredQty) {
+    requiredQty = pot.length;
   }
   let newLetters;
   if (currentUserId === BALANCED_USER_ID) {
-    newLetters = drawBalancedLetters(
-      game.letters.pot,
-      requiredQty,
-      currentUserLetters
-    );
+    newLetters = drawBalancedLetters(pot, requiredQty, currentUserLetters);
   } else {
     newLetters = [];
     while (newLetters.length !== requiredQty) {
-      newLetters.push(
-        game.letters.pot.splice(
-          Math.floor(Math.random() * game.letters.pot.length),
-          1
-        )[0]
-      );
+      newLetters.push(pot.splice(Math.floor(Math.random() * pot.length), 1)[0]);
     }
   }
   const updatedUserLetters = currentUserLetters.concat(newLetters);
   const updatedGameLetters = {
     ...game.letters,
+    pot,
     [currentUserId]: updatedUserLetters,
   };
   return updatedGameLetters;
@@ -208,30 +214,53 @@ export const getWords = (newBoard, oldBoard) => {
 };
 
 export const rotate = (board) => {
-  return Array(15)
+  return Array(board[0].length)
     .fill(null)
     .map((_, index) => board.map((row) => row[index]));
 };
 
-const countWordScore = (wordMultiplier, wordObject, previousBoard, values) => {
+interface BonusContext {
+  boardType: string;
+  origin: BoardOrigin;
+}
+
+const countWordScore = (
+  wordMultiplier,
+  wordObject,
+  previousBoard,
+  values,
+  bonusContext: BonusContext
+) => {
   return (
     wordMultiplier *
     wordObject.word.reduce((wordScore, letter, index) => {
       let letterMultiplier = 1;
+      const bonus = getLetterBonus(
+        wordObject.y,
+        wordObject.x + index,
+        bonusContext.boardType,
+        bonusContext.origin
+      );
       if (
-        letterBonuses[wordObject.y] &&
-        letterBonuses[wordObject.y][wordObject.x + index] &&
+        bonus &&
         // check if it is not a letter of previous player
         !previousBoard[wordObject.y][wordObject.x + index]
       ) {
-        letterMultiplier = letterBonuses[wordObject.y][wordObject.x + index];
+        letterMultiplier = bonus;
       }
       return wordScore + values[letter[0]] * letterMultiplier;
     }, 0)
   );
 };
 
-export const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
+export const turnWordsAndScore = (
+  board,
+  previousBoard,
+  bonus15,
+  values,
+  boardType = "classic",
+  origin: BoardOrigin = DEFAULT_ORIGIN
+) => {
   const horizontalWords = getHorizontalWords(board, previousBoard);
   const rotatedBoard = rotate(board);
   const rotatedPreviousBoard = rotate(previousBoard);
@@ -239,12 +268,16 @@ export const turnWordsAndScore = (board, previousBoard, bonus15, values) => {
   const horizontalTurn = getHorizontalOrVerticalTurn(
     horizontalWords,
     previousBoard,
-    values
+    values,
+    { boardType, origin }
   );
+  // the rotated pass sees transposed coordinates, so the origin components
+  // swap; the classic bonus pattern is symmetric under transposition
   const verticalTurn = getHorizontalOrVerticalTurn(
     verticalWords,
     rotatedPreviousBoard,
-    values
+    values,
+    { boardType, origin: { x: origin.y, y: origin.x } }
   );
   let bonus = 0;
   if (bonus15) {
@@ -385,19 +418,25 @@ export const getResult = (score, turns, userIds) => {
 const getHorizontalOrVerticalTurn = (
   horizontalWords,
   previousBoard,
-  values
+  values,
+  bonusContext: BonusContext
 ) => {
   return horizontalWords.reduce(
     (turn, wordObject) => {
       let wordMultiplier = 0;
       for (let i = wordObject.x; i < wordObject.x + wordObject.len; i++) {
+        const bonus = getWordBonus(
+          wordObject.y,
+          i,
+          bonusContext.boardType,
+          bonusContext.origin
+        );
         if (
-          wordBonuses[wordObject.y] &&
-          wordBonuses[wordObject.y][i] &&
+          bonus &&
           // check if it is not a letter of previous player
           !previousBoard[wordObject.y][i]
         ) {
-          wordMultiplier += wordBonuses[wordObject.y][i];
+          wordMultiplier += bonus;
         }
       }
       if (wordMultiplier === 0) {
@@ -407,7 +446,8 @@ const getHorizontalOrVerticalTurn = (
         wordMultiplier,
         wordObject,
         previousBoard,
-        values
+        values,
+        bonusContext
       );
       turn.score += wordScore;
       turn.words.push({
@@ -419,15 +459,21 @@ const getHorizontalOrVerticalTurn = (
   );
 };
 
-export const sendTurnNotification = (playerId, gameId) => {
+export const sendTurnNotification = (playerId, gameId, boardType?: string) => {
   notify(playerId, {
     title: `Your turn in game ${gameId}!`,
     gameId,
+    skipMobile: boardType === "infinite",
   });
 };
 
-export const sendDisapproveNotification = (playerId, gameId) => {
+export const sendDisapproveNotification = (
+  playerId,
+  gameId,
+  boardType?: string
+) => {
   notify(playerId, {
+    skipMobile: boardType === "infinite",
     title: `Your turn in game ${gameId} is not approved`,
     message: `Please undo your turn and make another one`,
     gameId,

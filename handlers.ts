@@ -14,10 +14,15 @@ import {
 } from "./services/chat.js";
 import registerVisit from "./services/visit.js";
 import { fetchGames } from "./services/lobby.js";
+import { canSeeGame } from "./services/board.js";
+import {
+  gameUpdatedAction,
+  parseClientFeatures,
+  supportsInfiniteBoard,
+} from "./services/gamePayload.js";
 import {
   ALL_GAMES,
   ALL_MESSAGES,
-  GAME_UPDATED,
   LOGIN_OR_SIGNUP_ERROR,
   MESSAGES_COUNT,
   NEW_MESSAGE,
@@ -92,6 +97,12 @@ const receiveSaveAndSendNewMessage = async (
     return; // Don't continue with notifications if message failed
   }
   try {
+    // a phone cannot open an infinite game, so a chat notification would
+    // only send it to a screen it cannot render
+    const chatGame = await Game.findByPk(socket.data.gameId, {
+      attributes: ["boardType"],
+    });
+    const skipMobile = chatGame && chatGame.boardType === "infinite";
     const usersOfThisGame = await User.findAll({
       include: {
         model: Game,
@@ -110,6 +121,7 @@ const receiveSaveAndSendNewMessage = async (
             message: `${socket.data.user.name} in game ${socket.data.gameId}: ${payload}`,
             gameId: socket.data.gameId,
             type: "chat_message",
+            skipMobile,
           });
           const clients = await Promise.all(getClientsByPlayerId(user.id));
           clients
@@ -130,13 +142,16 @@ const receiveSaveAndSendNewMessage = async (
 const addUserToSocket = async (
   _: MyServer,
   socket: MySocket,
-  payload: string | { jwt: string; pushToken?: string }
+  payload: string | { jwt: string; pushToken?: string; features?: string[] }
 ) => {
   let user = undefined;
 
   // Handle both old (string) and new (object) payload formats
   const jwt = typeof payload === "string" ? payload : payload.jwt;
   const pushToken = typeof payload === "object" ? payload.pushToken : undefined;
+  if (typeof payload === "object") {
+    socket.data.features = parseClientFeatures(payload.features);
+  }
 
   console.log("addUserToSocket - JWT:", jwt, "PushToken:", pushToken);
 
@@ -148,7 +163,7 @@ const addUserToSocket = async (
   } catch (error) {
     console.log("problem retrieving user:", error);
     if (error instanceof Error && error.name === "TokenExpiredError") {
-      socket.emit("message", { type: TOKEN_EXPIRED });
+      socket.emit("message", { type: TOKEN_EXPIRED, payload: null });
     } else {
       const errorMessage =
         error instanceof Error
@@ -168,6 +183,13 @@ const addUserToSocket = async (
     return;
   }
   if (user) {
+    // whoever was here before may have been in a room this account cannot
+    // see: give the room up and let the check below decide again
+    if (socket.data.playerId !== user.id && socket.data.gameId) {
+      socket.leave(socket.data.gameId.toString());
+      socket.data.pendingGameId = socket.data.gameId;
+      delete socket.data.gameId;
+    }
     socket.data.playerId = user.id;
     socket.data.user = user;
     addPlayerClient(socket);
@@ -184,24 +206,45 @@ const addUserToSocket = async (
     if (pushToken) {
       storePushToken(user.id, pushToken);
     }
+    let joinedOnRetry = false;
+    if (socket.data.pendingGameId) {
+      const pending = socket.data.pendingGameId;
+      await addGameToSocket(_, socket, pending);
+      // addGameToSocket has already sent this game's history
+      joinedOnRetry = socket.data.gameId === pending;
+    }
     try {
       const count = await countAllMessagesInLobby(user.id);
       socket.emit("message", { type: MESSAGES_COUNT, payload: count });
       // if user was on a game page but not logged in, and then he logs in we need to send him more full game object
       if (socket.data.gameId) {
         const game = await fetchGame(socket.data.gameId);
-        socket.emit("message", {
-          type: GAME_UPDATED,
-          payload: { gameId: socket.data.gameId, game },
-        });
-        const allMessages = await getAllMessagesInGame(
-          socket.data.gameId,
-          user.id
-        );
-        if (allMessages.length > 0) {
-          socket.emit("message", { type: ALL_MESSAGES, payload: allMessages });
+        if (
+          game &&
+          !canSeeGame(
+            game,
+            user.id,
+            supportsInfiniteBoard(socket.data.features)
+          )
+        ) {
+          socket.leave(socket.data.gameId.toString());
+          delete socket.data.gameId;
+        } else {
+          socket.emit("message", gameUpdatedAction(socket.data.gameId, game));
+          if (!joinedOnRetry) {
+            const allMessages = await getAllMessagesInGame(
+              socket.data.gameId,
+              user.id
+            );
+            if (allMessages.length > 0) {
+              socket.emit("message", {
+                type: ALL_MESSAGES,
+                payload: allMessages,
+              });
+            }
+          }
+          await registerVisit(socket.data.gameId, user.id);
         }
-        await registerVisit(socket.data.gameId, user.id);
       }
     } catch (error) {
       console.log(error);
@@ -217,6 +260,29 @@ const addGameToSocket = async (
   gameId: number
 ) => {
   if (!gameId) return;
+  // restricted infinite games are invisible: don't let the socket join
+  // the game room and receive its updates. A client usually identifies
+  // itself first, but not always, so an unidentified socket keeps the
+  // request and it is retried once the user is known
+  const game = await Game.findByPk(gameId, { attributes: ["boardType"] });
+  if (
+    game &&
+    !canSeeGame(
+      game,
+      socket.data.playerId,
+      supportsInfiniteBoard(socket.data.features)
+    )
+  ) {
+    socket.data.pendingGameId = gameId;
+    // the client has moved on to this game, so it must not keep chatting
+    // into the room it came from
+    if (socket.data.gameId) {
+      socket.leave(socket.data.gameId.toString());
+      delete socket.data.gameId;
+    }
+    return;
+  }
+  delete socket.data.pendingGameId;
   socket.leave("lobby");
   if (socket.data.gameId) {
     socket.leave(socket.data.gameId.toString());
@@ -266,7 +332,10 @@ const enterLobby = async (_: MyServer, socket: MySocket) => {
   try {
     const count = await countAllMessagesInLobby(socket.data.playerId);
     socket.emit("message", { type: MESSAGES_COUNT, payload: count });
-    const games = await fetchGames();
+    const games = await fetchGames(
+      socket.data.playerId,
+      supportsInfiniteBoard(socket.data.features)
+    );
     socket.emit("message", { type: ALL_GAMES, payload: games });
   } catch (error) {
     console.log(error);

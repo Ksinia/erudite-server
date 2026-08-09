@@ -3,6 +3,7 @@ import { getNextTurn, turnWordsAndScore, updateGameLetters } from "./game.js";
 import lettersSets from "../constants/letterSets/index.js";
 import fetchGame from "./fetchGame.js";
 import updateGame from "./updateGame.js";
+import { DEFAULT_ORIGIN } from "./board.js";
 
 /**
  * Updates game according to validation and returns updated game
@@ -25,7 +26,9 @@ export default async (currentUserId, gameId, validation) => {
         game.board,
         game.previousBoard,
         bonus15,
-        values
+        values,
+        game.boardType || "classic",
+        game.boardOrigin || DEFAULT_ORIGIN
       );
       const previousScore = { ...game.score };
       const updatedScore = {
