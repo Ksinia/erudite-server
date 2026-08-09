@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 
-import { originUrls, serverPort } from "./constants/runtime.js";
+import { isAllowedOrigin, serverPort } from "./constants/runtime.js";
 import signupRouter from "./routers/user.js";
 import pushRouter from "./routers/push.js";
 import { router as loginRouter } from "./auth/router.js";
@@ -62,12 +62,12 @@ const http = createServer(app);
 const webSocketsServer: MyServer = new Server(http, {
   path: "/socket",
   cors: {
-    origin: originUrls,
+    origin: isAllowedOrigin,
   },
 });
 
 const bodyParserMiddleware = bodyParser.json();
-const corsMiddleware = cors({ origin: originUrls });
+const corsMiddleware = cors({ origin: isAllowedOrigin });
 
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,

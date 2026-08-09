@@ -47,6 +47,10 @@ docker-compose up -d
 
 to start local postgres14 container. See `docker-compose.yaml` for more details
 
+## Allowed origins
+
+`ORIGIN_URLS` is a comma-separated list of origins that may call the API from a browser. An entry may contain one `*`, standing for a single subdomain label, which covers the branch and preview deployments of one site: `https://*--erudit.netlify.app` admits every branch deploy of that Netlify site without opening the API to the web at large.
+
 ## Technologies used
 
 - express
