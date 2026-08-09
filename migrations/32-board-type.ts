@@ -1,6 +1,9 @@
 "use strict";
 
-import { DataTypes, QueryInterface } from "sequelize";
+// CommonJS on purpose, like every other migration here: umzug requires these
+// files, and an import statement would make Node treat the file as an ES
+// module, where module.exports does not exist and the app fails to boot
+const Sequelize = require("sequelize");
 
 /**
  * Actions summary:
@@ -18,36 +21,40 @@ const info = {
 };
 
 module.exports = {
-  up: function (queryInterface: QueryInterface) {
-    return queryInterface.sequelize.transaction(async (transaction) => {
-      await queryInterface.addColumn(
-        "Games",
-        "boardType",
-        {
-          type: DataTypes.STRING,
-          defaultValue: "classic",
-        },
-        { transaction }
-      );
-      await queryInterface.addColumn(
-        "Games",
-        "boardOrigin",
-        {
-          type: DataTypes.JSONB,
-          defaultValue: { x: 0, y: 0 },
-        },
-        { transaction }
-      );
+  up: function (queryInterface) {
+    return queryInterface.sequelize.transaction(function (transaction) {
+      return queryInterface
+        .addColumn(
+          "Games",
+          "boardType",
+          {
+            type: Sequelize.STRING,
+            defaultValue: "classic",
+          },
+          { transaction }
+        )
+        .then(function () {
+          return queryInterface.addColumn(
+            "Games",
+            "boardOrigin",
+            {
+              type: Sequelize.JSONB,
+              defaultValue: { x: 0, y: 0 },
+            },
+            { transaction }
+          );
+        });
     });
   },
-  down: function (queryInterface: QueryInterface) {
-    return queryInterface.sequelize.transaction(async (transaction) => {
-      await queryInterface.removeColumn("Games", "boardType", {
-        transaction,
-      });
-      await queryInterface.removeColumn("Games", "boardOrigin", {
-        transaction,
-      });
+  down: function (queryInterface) {
+    return queryInterface.sequelize.transaction(function (transaction) {
+      return queryInterface
+        .removeColumn("Games", "boardType", { transaction })
+        .then(function () {
+          return queryInterface.removeColumn("Games", "boardOrigin", {
+            transaction,
+          });
+        });
     });
   },
   info: info,
