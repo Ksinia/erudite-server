@@ -311,6 +311,18 @@ export const subtract = (arr, subarr) => {
   ).letters;
 };
 
+/**
+ * True when arr contains every letter of subarr, counting duplicates.
+ * subtract ignores the letters it cannot find, so anything that mutates a
+ * game from its result has to ask this first.
+ */
+export const holdsAll = (arr: string[], subarr: unknown): boolean =>
+  Array.isArray(subarr) &&
+  // sort() converts what it compares, so an element that refuses to become a
+  // string would throw before the count below is reached
+  subarr.every((letter) => typeof letter === "string") &&
+  subtract(arr, subarr).length === arr.length - subarr.length;
+
 export const giveLetters = (bag, userLetters, lettersToChange, userId?) => {
   const tempBag = shuffle(bag.slice().concat(lettersToChange));
   const requiredQty = lettersToChange.length;

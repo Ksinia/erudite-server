@@ -1,6 +1,6 @@
 import Game from "../models/game.js";
 import User from "../models/user.js";
-import { getNextTurn, giveLetters, subtract } from "./game.js";
+import { getNextTurn, giveLetters, holdsAll, subtract } from "./game.js";
 import updateGame from "./updateGame.js";
 
 /**
@@ -8,14 +8,17 @@ import updateGame from "./updateGame.js";
  */
 export default async (currentUserId, gameId, lettersToChange) => {
   const game = await Game.findByPk(gameId);
-  // user can exchange letters only in his turn
+  // user can exchange letters only in his turn, and only letters he holds:
+  // subtract drops just the tiles it finds while giveLetters returns every
+  // requested tile to the pot and draws that many, so a request naming tiles
+  // the player does not have would grow the rack and put letters into the
+  // pot that were never in the game
   if (
     game.phase === "turn" &&
     game.turnOrder.includes(currentUserId) &&
-    currentUserId === game.turnOrder[game.turn]
+    currentUserId === game.turnOrder[game.turn] &&
+    holdsAll(game.letters[currentUserId], lettersToChange)
   ) {
-    //check if user exchanges his own letters
-
     // subtract letters to change
     const previousUserLetters = game.letters[currentUserId];
     const remainingLetters = subtract(previousUserLetters, lettersToChange);
