@@ -27,7 +27,7 @@ export const sendFinishedGameNotifications = async (gameId) => {
         where: { id: gameId },
         attributes: [],
       },
-      attributes: ["id", "name", "email"],
+      attributes: ["id", "name", "email", "emailConfirmed"],
     });
     users.forEach((user) => {
       if (user.email && user.emailConfirmed) {
@@ -63,7 +63,7 @@ export const sendActiveGameNotifications = async () => {
           [Sequelize.Op.lt]: dayAgo,
         },
       },
-      attributes: ["id", "name", "email"],
+      attributes: ["id", "name", "email", "emailConfirmed"],
       include: {
         model: Game,
         as: "games",
